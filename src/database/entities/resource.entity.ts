@@ -12,8 +12,8 @@ export class Resource {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  mimeType: string;
+  @Column({ nullable: true })
+  mimeType?: string;
 
   @Column('bigint')
   fileSize: number;

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Body,
   UseInterceptors,
   UploadedFile,
   HttpException,
@@ -37,15 +38,27 @@ export class ResourcesController {
   /**
    * POST /resources - Upload and process a file
    * Accepts: CSV, PDF, TXT, JSON files
+   * Optional: mimeType parameter for validation
    * Returns: Resource ID
    */
   @Post()
   @UseInterceptors(FileInterceptor('file'))
-  async uploadResource(@UploadedFile() file: Express.Multer.File) {
+  async uploadResource(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body?: { mimeType?: string },
+  ) {
     try {
       // Validate file
       if (!file) {
         throw new HttpException('No file provided', HttpStatus.BAD_REQUEST);
+      }
+
+      // Validate provided mimeType if present
+      if (body?.mimeType && body.mimeType !== file.mimetype) {
+        throw new HttpException(
+          `Provided mimeType (${body.mimeType}) doesn't match detected type (${file.mimetype})`,
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       // Check file size
@@ -103,7 +116,7 @@ export class ResourcesController {
 
       return {
         success: true,
-        resourceId,
+        id: resourceId,
         message: 'File uploaded and processed successfully',
       };
     } catch (error) {
@@ -155,7 +168,9 @@ export class ResourcesController {
 
       return {
         success: true,
+        id,
         message: 'Resource deleted successfully',
+        status: HttpStatus.OK,
       };
     } catch (error) {
       this.logger.error(`Failed to delete resource ${id}`, error);

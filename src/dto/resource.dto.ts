@@ -7,13 +7,15 @@ export class ResourceResponseDto {
 
 export class UploadResponseDto {
   success: boolean;
-  resourceId: string;
+  id: string;
   message: string;
 }
 
 export class DeleteResponseDto {
   success: boolean;
+  id: string;
   message: string;
+  status: number;
 }
 
 export class ListResourcesResponseDto {
