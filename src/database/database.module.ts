@@ -24,6 +24,9 @@ import { Resource, DocumentChunk } from './entities';
       }),
       inject: [ConfigService],
     }),
+    // Register repositories for dependency injection
+    TypeOrmModule.forFeature([Resource, DocumentChunk]),
   ],
+  exports: [TypeOrmModule],
 })
 export class DatabaseModule {}
