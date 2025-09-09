@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Resource, DocumentChunk } from './entities';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
-        entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+        entities: [Resource, DocumentChunk],
         synchronize: true, // À désactiver en prod
         logging: process.env.NODE_ENV === 'development',
         // Configuration pgvector
