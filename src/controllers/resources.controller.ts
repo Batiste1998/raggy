@@ -20,6 +20,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { LangchainService } from '../services';
 import { Resource } from '../database';
 
+// Default maximum file size: 10MB in bytes
+const DEFAULT_MAX_FILE_SIZE_B = 10485760;
+
 @Controller('resources')
 export class ResourcesController {
   private readonly logger = new Logger(ResourcesController.name);
@@ -46,11 +49,18 @@ export class ResourcesController {
       }
 
       // Check file size
-      const maxFileSize =
-        this.configService.get('MAX_FILE_SIZE_MB', 10) * 1024 * 1024;
-      if (file.size > maxFileSize) {
+      const maxFileSizeBytes = parseInt(
+        this.configService.get(
+          'MAX_FILE_SIZE_B',
+          DEFAULT_MAX_FILE_SIZE_B.toString(),
+        ),
+        10,
+      );
+      const maxFileSizeMB = Math.round(maxFileSizeBytes / (1024 * 1024));
+
+      if (file.size > maxFileSizeBytes) {
         throw new HttpException(
-          `File size exceeds maximum limit of ${this.configService.get('MAX_FILE_SIZE_MB', 10)}MB`,
+          `File size exceeds maximum limit of ${maxFileSizeMB}MB`,
           HttpStatus.BAD_REQUEST,
         );
       }

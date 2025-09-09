@@ -11,6 +11,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Resource, DocumentChunk } from './database';
 
+// Default maximum file size: 10MB in bytes
+const DEFAULT_MAX_FILE_SIZE_B = 10485760;
+
 @Controller()
 export class AppController {
   constructor(
@@ -29,13 +32,19 @@ export class AppController {
 
   @Get('config')
   getConfig() {
-    const maxFileSize = parseInt(
-      this.configService.get('MAX_FILE_SIZE_MB', '10'),
+    const maxFileSizeBytes = parseInt(
+      this.configService.get(
+        'MAX_FILE_SIZE_B',
+        DEFAULT_MAX_FILE_SIZE_B.toString(),
+      ),
       10,
     );
+    const maxFileSizeMB = Math.round(maxFileSizeBytes / (1024 * 1024));
+
     return {
-      maxFileSizeMB: maxFileSize,
-      message: `Maximum file size allowed: ${maxFileSize}MB`,
+      maxFileSizeMB: maxFileSizeMB,
+      maxFileSizeBytes: maxFileSizeBytes,
+      message: `Maximum file size allowed: ${maxFileSizeMB}MB (${maxFileSizeBytes} bytes)`,
     };
   }
 
