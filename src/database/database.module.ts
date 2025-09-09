@@ -16,7 +16,8 @@ import { Resource, DocumentChunk } from './entities';
         database: configService.get('DB_NAME'),
         entities: [Resource, DocumentChunk],
         synchronize: true, // À désactiver en prod
-        logging: process.env.NODE_ENV === 'development',
+        logging:
+          process.env.NODE_ENV === 'development' ? ['error', 'warn'] : false,
         // Configuration pgvector
         extra: {
           // Options supplémentaires pour pgvector si nécessaire

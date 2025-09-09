@@ -15,6 +15,9 @@ import { CSVLoader } from '@langchain/community/document_loaders/fs/csv';
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { TextLoader } from 'langchain/document_loaders/fs/text';
 import { JSONLoader } from 'langchain/document_loaders/fs/json';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { writeFile, unlink } from 'fs/promises';
 
 // Entities
 import { Resource, DocumentChunk } from '../database';
@@ -53,8 +56,14 @@ export class LangchainService {
 
       // Initialize text splitter
       this.textSplitter = new RecursiveCharacterTextSplitter({
-        chunkSize: this.configService.get('DOCUMENT_CHUNK_SIZE', 1000),
-        chunkOverlap: this.configService.get('DOCUMENT_CHUNK_OVERLAP', 200),
+        chunkSize: parseInt(
+          this.configService.get('DOCUMENT_CHUNK_SIZE', '1000'),
+          10,
+        ),
+        chunkOverlap: parseInt(
+          this.configService.get('DOCUMENT_CHUNK_OVERLAP', '200'),
+          10,
+        ),
       });
 
       // Initialize vector store
@@ -76,7 +85,7 @@ export class LangchainService {
    * Process a file based on its MIME type
    */
   async processFile(
-    filePath: string,
+    fileBuffer: Buffer,
     mimeType: string,
     resourceId: string,
   ): Promise<void> {
@@ -85,16 +94,16 @@ export class LangchainService {
 
       switch (mimeType) {
         case 'text/csv':
-          documents = await this.loadCSV(filePath);
+          documents = await this.loadCSV(fileBuffer);
           break;
         case 'application/pdf':
-          documents = await this.loadPDF(filePath);
+          documents = await this.loadPDF(fileBuffer);
           break;
         case 'text/plain':
-          documents = await this.loadText(filePath);
+          documents = await this.loadText(fileBuffer);
           break;
         case 'application/json':
-          documents = await this.loadJSON(filePath);
+          documents = await this.loadJSON(fileBuffer);
           break;
         default:
           throw new Error(`Unsupported file type: ${mimeType}`);
@@ -106,45 +115,74 @@ export class LangchainService {
       // Generate embeddings and store in vector database
       await this.storeChunksInVectorDB(chunks, resourceId);
 
-      this.logger.log(`Successfully processed file: ${filePath}`);
+      this.logger.log(
+        `Successfully processed file buffer (${fileBuffer.length} bytes)`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to process file: ${filePath}`, error);
+      this.logger.error(
+        `Failed to process file buffer (${fileBuffer.length} bytes)`,
+        error,
+      );
       throw error;
     }
   }
 
   /**
-   * Load CSV file
+   * Load CSV file from buffer
    */
-  private async loadCSV(filePath: string): Promise<Document[]> {
-    const loader = new CSVLoader(filePath);
-    return await loader.load();
+  private async loadCSV(fileBuffer: Buffer): Promise<Document[]> {
+    const tempPath = join(tmpdir(), `temp-${Date.now()}.csv`);
+    try {
+      await writeFile(tempPath, fileBuffer);
+      const loader = new CSVLoader(tempPath);
+      return await loader.load();
+    } finally {
+      await unlink(tempPath).catch(() => {}); // Ignore errors
+    }
   }
 
   /**
-   * Load PDF file
+   * Load PDF file from buffer
    */
-  private async loadPDF(filePath: string): Promise<Document[]> {
-    const loader = new PDFLoader(filePath, {
-      splitPages: false, // Create one document per file
-    });
-    return await loader.load();
+  private async loadPDF(fileBuffer: Buffer): Promise<Document[]> {
+    const tempPath = join(tmpdir(), `temp-${Date.now()}.pdf`);
+    try {
+      await writeFile(tempPath, fileBuffer);
+      const loader = new PDFLoader(tempPath, {
+        splitPages: false, // Create one document per file
+      });
+      return await loader.load();
+    } finally {
+      await unlink(tempPath).catch(() => {}); // Ignore errors
+    }
   }
 
   /**
-   * Load text file
+   * Load text file from buffer
    */
-  private async loadText(filePath: string): Promise<Document[]> {
-    const loader = new TextLoader(filePath);
-    return await loader.load();
+  private async loadText(fileBuffer: Buffer): Promise<Document[]> {
+    const tempPath = join(tmpdir(), `temp-${Date.now()}.txt`);
+    try {
+      await writeFile(tempPath, fileBuffer);
+      const loader = new TextLoader(tempPath);
+      return await loader.load();
+    } finally {
+      await unlink(tempPath).catch(() => {}); // Ignore errors
+    }
   }
 
   /**
-   * Load JSON file
+   * Load JSON file from buffer
    */
-  private async loadJSON(filePath: string): Promise<Document[]> {
-    const loader = new JSONLoader(filePath);
-    return await loader.load();
+  private async loadJSON(fileBuffer: Buffer): Promise<Document[]> {
+    const tempPath = join(tmpdir(), `temp-${Date.now()}.json`);
+    try {
+      await writeFile(tempPath, fileBuffer);
+      const loader = new JSONLoader(tempPath);
+      return await loader.load();
+    } finally {
+      await unlink(tempPath).catch(() => {}); // Ignore errors
+    }
   }
 
   /**
