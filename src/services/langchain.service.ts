@@ -2,12 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import pgvector from 'pgvector';
 
 // LangChain imports
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { OllamaEmbeddings } from '@langchain/ollama';
 import { ChatOllama } from '@langchain/ollama';
-import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import { Document } from '@langchain/core/documents';
 
 // Document loaders
@@ -20,20 +20,26 @@ import { join } from 'path';
 import { writeFile, unlink } from 'fs/promises';
 
 // Entities
-import { Resource, DocumentChunk } from '../database';
+import { DocumentChunk } from '../database';
+
+// Interface for raw SQL query results
+interface RawChunkResult {
+  id: string;
+  content: string;
+  metadata: Record<string, any>;
+  resource_id: string;
+  embedding: number[];
+}
 
 @Injectable()
 export class LangchainService {
   private readonly logger = new Logger(LangchainService.name);
-  private vectorStore: PGVectorStore;
   private embeddings: OllamaEmbeddings;
   private chatModel: ChatOllama;
   private textSplitter: RecursiveCharacterTextSplitter;
 
   constructor(
     private configService: ConfigService,
-    @InjectRepository(Resource)
-    private resourceRepository: Repository<Resource>,
     @InjectRepository(DocumentChunk)
     private documentChunkRepository: Repository<DocumentChunk>,
   ) {
@@ -226,33 +232,88 @@ export class LangchainService {
   }
 
   /**
-   * Search for similar documents
+   * Search for similar documents using pgvector similarity
    */
-  async searchSimilar(): Promise<DocumentChunk[]> {
-    // This will be implemented with PGVector similarity search
-    // For now, return empty array
-    return await Promise.resolve([]);
+  async searchSimilar(query: string, k: number = 5): Promise<DocumentChunk[]> {
+    try {
+      // Generate embedding for the query
+      const queryEmbedding = await this.embeddings.embedQuery(query);
+
+      // Use raw SQL query with pgvector distance operator
+      const rawResults: unknown[] = await this.documentChunkRepository.query(
+        `
+        SELECT id, content, metadata, resource_id, embedding
+        FROM document_chunks 
+        ORDER BY embedding::vector <-> $1::vector 
+        LIMIT $2
+      `,
+        [pgvector.toSql(queryEmbedding), k],
+      );
+
+      // Type cast to our interface
+      const results = rawResults as RawChunkResult[];
+
+      this.logger.log(
+        `Found ${results.length} similar chunks for query: "${query}"`,
+      );
+
+      // Convert raw results to DocumentChunk entities
+      return results.map((row) => {
+        const chunk = new DocumentChunk();
+        chunk.id = row.id;
+        chunk.content = row.content;
+        chunk.metadata = row.metadata;
+        chunk.resource_id = row.resource_id;
+        chunk.embedding = row.embedding;
+        return chunk;
+      });
+    } catch (error) {
+      this.logger.error('Failed to search similar documents', error);
+      throw error;
+    }
   }
 
   /**
-   * Generate RAG response
+   * Generate RAG response using system prompt from .env
    */
   async generateRAGResponse(query: string): Promise<string> {
     try {
-      // Find similar documents
-      const similarDocs = await this.searchSimilar();
+      this.logger.log(`Starting RAG response generation for query: "${query}"`);
+
+      // Find similar documents using the query
+      this.logger.log('Searching for similar documents...');
+      const similarDocs = await this.searchSimilar(query, 5);
+      this.logger.log(`Found ${similarDocs.length} similar documents`);
 
       // Create context from similar documents
       const context = similarDocs.map((doc) => doc.content).join('\n\n');
+      this.logger.log(`Created context with ${context.length} characters`);
 
-      // Generate response using chat model
-      const prompt = `Context: ${context}\n\nQuestion: ${query}\n\nAnswer:`;
+      // Get system prompt from environment variables
+      const systemPrompt = this.configService.get<string>('SYSTEM_PROMPT', '');
+      this.logger.log(`System prompt length: ${systemPrompt.length}`);
 
+      // Generate response using chat model with Oto system prompt
+      const prompt = `${systemPrompt}
+
+Context (documents RAG): 
+${context}
+
+Question: ${query}
+
+Réponse:`;
+
+      this.logger.log('Calling chat model...');
       const response = await this.chatModel.invoke(prompt);
+      this.logger.log('Chat model response received');
 
-      return typeof response.content === 'string'
-        ? response.content
-        : JSON.stringify(response.content);
+      const finalResponse =
+        typeof response.content === 'string'
+          ? response.content
+          : JSON.stringify(response.content);
+
+      this.logger.log(`Final response length: ${finalResponse.length}`);
+      return finalResponse;
     } catch (error) {
       this.logger.error('Failed to generate RAG response', error);
       throw error;

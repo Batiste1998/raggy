@@ -20,6 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
 // Services
 import { LangchainService } from '../services';
 import { Resource } from '../database';
+import { ChatDto } from '../dto';
 
 // Default maximum file size: 10MB in bytes
 const DEFAULT_MAX_FILE_SIZE_B = 10485760;
@@ -215,6 +216,40 @@ export class ResourcesController {
 
       throw new HttpException(
         'Failed to retrieve resources',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * POST /resources/chat - Test RAG functionality
+   * Returns: RAG response based on uploaded documents
+   */
+  @Post('chat')
+  async chat(
+    @Body() chatDto: ChatDto,
+  ): Promise<{ success: boolean; query: string; response: string }> {
+    try {
+      const response = await this.langchainService.generateRAGResponse(
+        chatDto.query,
+      );
+
+      this.logger.log(`RAG response generated for query: "${chatDto.query}"`);
+
+      return {
+        success: true,
+        query: chatDto.query,
+        response,
+      };
+    } catch (error) {
+      this.logger.error('Failed to generate RAG response', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to generate RAG response',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
