@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Resource, DocumentChunk } from './entities';
+import {
+  Resource,
+  DocumentChunk,
+  User,
+  Conversation,
+  Message,
+} from './entities';
 
 @Module({
   imports: [
@@ -14,7 +20,7 @@ import { Resource, DocumentChunk } from './entities';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
-        entities: [Resource, DocumentChunk],
+        entities: [Resource, DocumentChunk, User, Conversation, Message],
         synchronize: true, // À désactiver en prod
         logging:
           process.env.NODE_ENV === 'development' ? ['error', 'warn'] : false,
@@ -26,7 +32,13 @@ import { Resource, DocumentChunk } from './entities';
       inject: [ConfigService],
     }),
     // Register repositories for dependency injection
-    TypeOrmModule.forFeature([Resource, DocumentChunk]),
+    TypeOrmModule.forFeature([
+      Resource,
+      DocumentChunk,
+      User,
+      Conversation,
+      Message,
+    ]),
   ],
   exports: [TypeOrmModule],
 })
