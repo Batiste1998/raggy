@@ -15,6 +15,10 @@ import {
   ChatPromptTemplate,
   MessagesPlaceholder,
 } from '@langchain/core/prompts';
+import { createHistoryAwareRetriever } from 'langchain/chains/history_aware_retriever';
+import { createStuffDocumentsChain } from 'langchain/chains/combine_documents';
+import { createRetrievalChain } from 'langchain/chains/retrieval';
+import { BaseRetriever } from '@langchain/core/retrievers';
 
 // Document loaders
 import { CSVLoader } from '@langchain/community/document_loaders/fs/csv';
@@ -31,6 +35,8 @@ import { DocumentChunk } from '../database';
 // Services
 import { MessageService } from './message.service';
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+
 // Interface for raw SQL query results
 interface RawChunkResult {
   id: string;
@@ -38,6 +44,30 @@ interface RawChunkResult {
   metadata: Record<string, any>;
   resource_id: string;
   embedding: number[];
+}
+
+// Custom retriever class
+class CustomRetriever extends BaseRetriever {
+  lc_namespace = ['custom'];
+
+  constructor(private langchainService: LangchainService) {
+    super();
+  }
+
+  async _getRelevantDocuments(query: string): Promise<Document[]> {
+    const chunks = await this.langchainService.searchSimilar(query, 5);
+    return chunks.map(
+      (chunk) =>
+        new Document({
+          pageContent: chunk.content,
+          metadata: {
+            ...chunk.metadata,
+            resource_id: chunk.resource_id,
+            id: chunk.id,
+          },
+        }),
+    );
+  }
 }
 
 @Injectable()
@@ -48,6 +78,14 @@ export class LangchainService {
   private textSplitter: RecursiveCharacterTextSplitter;
   private ragChainWithHistory: RunnableWithMessageHistory<any, any>;
   private messageHistories: Record<string, InMemoryChatMessageHistory> = {};
+
+  private retriever: CustomRetriever;
+  private historyAwareRetriever: any;
+  private stuffChain: any;
+  private retrievalChain: any;
+  private conversationalChain: RunnableWithMessageHistory<any, any>;
+  private stuffChainNoHistory: any;
+  private retrievalChainNoHistory: any;
 
   constructor(
     private configService: ConfigService,
@@ -84,11 +122,72 @@ export class LangchainService {
         ),
       });
 
+      // Initialize custom retriever
+      this.retriever = new CustomRetriever(this);
+
+      // Create history aware retriever
+      const historyAwarePrompt = ChatPromptTemplate.fromMessages([
+        new MessagesPlaceholder('chat_history'),
+        ['user', '{input}'],
+        [
+          'user',
+          'Given the above conversation, generate a search query to look up relevant information.',
+        ],
+      ]);
+      this.historyAwareRetriever = await createHistoryAwareRetriever({
+        llm: this.chatModel,
+        retriever: this.retriever,
+        rephrasePrompt: historyAwarePrompt,
+      });
+
+      // Create stuff documents chain
+      const qaPrompt = ChatPromptTemplate.fromMessages([
+        ['system', this.configService.get<string>('SYSTEM_PROMPT', '')],
+        new MessagesPlaceholder('chat_history'),
+        [
+          'user',
+          "Context: {context}\n\nQuestion: {input}\n\nRÈGLES STRICTES À RESPECTER:\n1. NE FAIS AUCUNE RÉFÉRENCE aux cas spécifiques des documents (Colin, Nicole, etc.)\n2. NE PRÉSENTE PAS les problèmes médicaux des documents comme étant ceux de l'utilisateur actuel\n3. NE MENTIONNE PAS d'habitudes alimentaires des documents comme étant celles de l'utilisateur\n4. BASE TA RÉPONSE UNIQUEMENT sur ce que l'utilisateur a réellement dit dans cette conversation\n5. Si l'utilisateur n'a pas mentionné un problème de santé spécifique, ne l'invente pas\n6. Utilise les documents SEULEMENT pour donner des conseils nutritionnels généraux\n\nRéponse basée uniquement sur le profil réel de l'utilisateur:",
+        ],
+      ]);
+      this.stuffChain = await createStuffDocumentsChain({
+        llm: this.chatModel,
+        prompt: qaPrompt,
+      });
+
+      // Create retrieval chain
+      this.retrievalChain = await createRetrievalChain({
+        retriever: this.historyAwareRetriever,
+        combineDocsChain: this.stuffChain,
+      });
+
+      // Create conversational chain
+      this.conversationalChain = new RunnableWithMessageHistory({
+        runnable: this.retrievalChain,
+        getMessageHistory: (sessionId: string) =>
+          this.getMessageHistory(sessionId),
+        inputMessagesKey: 'input',
+        historyMessagesKey: 'chat_history',
+      });
+
+      // Create no history stuff chain
+      const qaPromptNoHistory = ChatPromptTemplate.fromMessages([
+        ['system', this.configService.get<string>('SYSTEM_PROMPT', '')],
+        [
+          'user',
+          "Context: {context}\n\nQuestion: {input}\n\nRÈGLES STRICTES À RESPECTER:\n1. NE FAIS AUCUNE RÉFÉRENCE aux cas spécifiques des documents (Colin, Nicole, etc.)\n2. NE PRÉSENTE PAS les problèmes médicaux des documents comme étant ceux de l'utilisateur actuel\n3. NE MENTIONNE PAS d'habitudes alimentaires des documents comme étant celles de l'utilisateur\n4. BASE TA RÉPONSE UNIQUEMENT sur ce que l'utilisateur a réellement dit dans cette conversation\n5. Si l'utilisateur n'a pas mentionné un problème de santé spécifique, ne l'invente pas\n6. Utilise les documents SEULEMENT pour donner des conseils nutritionnels généraux\n\nRéponse basée uniquement sur le profil réel de l'utilisateur:",
+        ],
+      ]);
+      this.stuffChainNoHistory = await createStuffDocumentsChain({
+        llm: this.chatModel,
+        prompt: qaPromptNoHistory,
+      });
+      this.retrievalChainNoHistory = await createRetrievalChain({
+        retriever: this.retriever,
+        combineDocsChain: this.stuffChainNoHistory,
+      });
+
       // Initialize vector store
       await this.initializeVectorStore();
-
-      // Initialize RunnableWithMessageHistory for conversation memory
-      this.initializeRunnableWithHistory();
 
       this.logger.log('LangChain services initialized successfully');
     } catch (error) {
@@ -366,49 +465,21 @@ export class LangchainService {
         );
       }
 
-      // Find similar documents using the query
-      this.logger.log('Searching for similar documents...');
-      const similarDocs = await this.searchSimilar(query, 5);
-      this.logger.log(`Found ${similarDocs.length} similar documents`);
-
-      // Create context from similar documents
-      const context = similarDocs.map((doc) => doc.content).join('\n\n');
-      this.logger.log(`Created context with ${context.length} characters`);
-
-      // Get system prompt from environment variables
-      const systemPrompt = this.configService.get<string>('SYSTEM_PROMPT', '');
-      this.logger.log(`System prompt length: ${systemPrompt.length}`);
-
-      // Build conversation context if available
-      let conversationContext = '';
+      let finalResponse: string;
       if (conversationId) {
-        const history = await this.getConversationHistory(conversationId);
-        if (history) {
-          conversationContext = `
-
-Conversation History:
-${history}`;
-        }
+        // Use conversational retrieval chain
+        const response = await this.conversationalChain.invoke(
+          { input: query },
+          { configurable: { sessionId: conversationId } },
+        );
+        finalResponse = response.answer;
+      } else {
+        // Use retrieval chain without history
+        const response = await this.retrievalChainNoHistory.invoke({
+          input: query,
+        });
+        finalResponse = response.answer;
       }
-
-      // Generate response using chat model with Oto system prompt
-      const prompt = `${systemPrompt}${conversationContext}
-
-Context (documents RAG):
-${context}
-
-Question: ${query}
-
-Réponse:`;
-
-      this.logger.log('Calling chat model...');
-      const response = await this.chatModel.invoke(prompt);
-      this.logger.log('Chat model response received');
-
-      const finalResponse =
-        typeof response.content === 'string'
-          ? response.content
-          : JSON.stringify(response.content);
 
       this.logger.log(`Final response length: ${finalResponse.length}`);
       return finalResponse;
@@ -432,36 +503,12 @@ Réponse:`;
       );
       this.logger.log(`Conversation: ${conversationId}, User: ${userId}`);
 
-      // Find similar documents using the query
-      const similarDocs = await this.searchSimilar(query, 5);
-      const context = similarDocs.map((doc) => doc.content).join('\n\n');
-
-      // Use RunnableWithMessageHistory for conversation memory
-      const response: unknown = await this.ragChainWithHistory.invoke(
-        {
-          input: `Context (documents RAG):
-${context}
-
-Question: ${query}
-
-Réponse:`,
-        },
-        {
-          configurable: {
-            sessionId: conversationId,
-          },
-        },
+      // Use conversational retrieval chain
+      const response = await this.conversationalChain.invoke(
+        { input: query },
+        { configurable: { sessionId: conversationId } },
       );
-
-      let finalResponse: string;
-      if (response && typeof response === 'object' && 'content' in response) {
-        const content = (response as { content: unknown }).content;
-        finalResponse =
-          typeof content === 'string' ? content : JSON.stringify(content);
-      } else {
-        finalResponse =
-          typeof response === 'string' ? response : JSON.stringify(response);
-      }
+      const finalResponse: string = response.answer;
 
       this.logger.log(
         `RAG response with memory generated, length: ${finalResponse.length}`,
