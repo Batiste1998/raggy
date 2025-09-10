@@ -23,7 +23,21 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+**Raggy** est un chatbot RAG (Retrieval-Augmented Generation) générique et modulaire construit avec NestJS. Il peut être adapté à différents domaines simplement en modifiant les variables d'environnement, sans changer le code source.
+
+### Fonctionnalités principales
+
+- 🔍 **Recherche vectorielle** avec pgvector et Ollama
+- 💬 **Gestion de conversations** avec historique intelligent
+- 📄 **Traitement de documents** (PDF, CSV, TXT, JSON)
+- 🔧 **Configuration multi-domaines** (Nutrition, Assurance, Support, etc.)
+- 🚀 **API REST complète** pour intégrations
+
+### Technologies
+
+- **Backend**: NestJS, TypeORM, PostgreSQL
+- **IA**: LangChain.js v0.3, Ollama (gemma3:latest, nomic-embed-text)
+- **Vector DB**: pgvector pour la recherche sémantique
 
 ## Project setup
 
@@ -44,18 +58,56 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
-## Run tests
+## Configuration Multi-Domaines
+
+Raggy peut être configuré pour différents domaines simplement en modifiant le fichier `.env` :
+
+### Variables d'environnement principales
 
 ```bash
+SYSTEM_PROMPT="Description du rôle de l'assistant"
+ASSISTANT_NAME="Nom de l'assistant"
+ASSISTANT_ROLE="Rôle détaillé"
+DOMAIN_SPECIFIC_RULES="Règles spécifiques au domaine"
+```
+
+### Exemples de configuration
+
+**Pour un assistant nutrition :**
+
+```bash
+SYSTEM_PROMPT="Vous êtes un assistant virtuel spécialisé en nutrition et bien-être. Répondez de manière professionnelle et bienveillante."
+ASSISTANT_NAME="Oto"
+ASSISTANT_ROLE="assistant virtuel spécialisé en nutrition et bien-être"
+DOMAIN_SPECIFIC_RULES="NE FAIS AUCUNE RÉFÉRENCE aux cas spécifiques des documents. NE PRÉSENTE PAS les problèmes médicaux des documents comme étant ceux de l'utilisateur actuel. NE MENTIONNE PAS d'habitudes alimentaires des documents comme étant celles de l'utilisateur. BASE TA RÉPONSE UNIQUEMENT sur ce que l'utilisateur a réellement dit dans cette conversation. Si l'utilisateur n'a pas mentionné un problème de santé spécifique, ne l'invente pas. Utilise les documents SEULEMENT pour donner des conseils nutritionnels généraux."
+```
+
+**Pour un assistant assurance :**
+
+```bash
+SYSTEM_PROMPT="Vous êtes un assistant virtuel spécialisé en assurances et services financiers. Répondez de manière professionnelle et sécurisante."
+ASSISTANT_NAME="AssurBot"
+ASSISTANT_ROLE="assistant virtuel spécialisé en assurances"
+DOMAIN_SPECIFIC_RULES="Utilise les documents pour fournir des informations sur les contrats d'assurance, les garanties et les démarches administratives. NE DONNE PAS de conseils juridiques. REDIRIGE vers un conseiller pour les situations complexes."
+```
+
+📖 **Documentation complète**: Voir [CONFIGURATION.md](CONFIGURATION.md)
+
+## Run tests
+
 # unit tests
+
 $ npm run test
 
 # e2e tests
+
 $ npm run test:e2e
 
 # test coverage
+
 $ npm run test:cov
-```
+
+````
 
 ## Deployment
 
@@ -66,7 +118,7 @@ If you are looking for a cloud-based platform to deploy your NestJS application,
 ```bash
 $ npm install -g @nestjs/mau
 $ mau deploy
-```
+````
 
 With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
 

@@ -146,7 +146,7 @@ export class LangchainService {
         new MessagesPlaceholder('chat_history'),
         [
           'user',
-          "Context: {context}\n\nQuestion: {input}\n\nRÈGLES STRICTES À RESPECTER:\n1. NE FAIS AUCUNE RÉFÉRENCE aux cas spécifiques des documents (Colin, Nicole, etc.)\n2. NE PRÉSENTE PAS les problèmes médicaux des documents comme étant ceux de l'utilisateur actuel\n3. NE MENTIONNE PAS d'habitudes alimentaires des documents comme étant celles de l'utilisateur\n4. BASE TA RÉPONSE UNIQUEMENT sur ce que l'utilisateur a réellement dit dans cette conversation\n5. Si l'utilisateur n'a pas mentionné un problème de santé spécifique, ne l'invente pas\n6. Utilise les documents SEULEMENT pour donner des conseils nutritionnels généraux\n\nRéponse basée uniquement sur le profil réel de l'utilisateur:",
+          `Context: {context}\n\nQuestion: {input}\n\n${this.configService.get<string>('DOMAIN_SPECIFIC_RULES', 'Utilise les documents disponibles pour fournir des réponses pertinentes et utiles.')}`,
         ],
       ]);
       this.stuffChain = await createStuffDocumentsChain({
@@ -174,7 +174,7 @@ export class LangchainService {
         ['system', this.configService.get<string>('SYSTEM_PROMPT', '')],
         [
           'user',
-          "Context: {context}\n\nQuestion: {input}\n\nRÈGLES STRICTES À RESPECTER:\n1. NE FAIS AUCUNE RÉFÉRENCE aux cas spécifiques des documents (Colin, Nicole, etc.)\n2. NE PRÉSENTE PAS les problèmes médicaux des documents comme étant ceux de l'utilisateur actuel\n3. NE MENTIONNE PAS d'habitudes alimentaires des documents comme étant celles de l'utilisateur\n4. BASE TA RÉPONSE UNIQUEMENT sur ce que l'utilisateur a réellement dit dans cette conversation\n5. Si l'utilisateur n'a pas mentionné un problème de santé spécifique, ne l'invente pas\n6. Utilise les documents SEULEMENT pour donner des conseils nutritionnels généraux\n\nRéponse basée uniquement sur le profil réel de l'utilisateur:",
+          `Context: {context}\n\nQuestion: {input}\n\n${this.configService.get<string>('DOMAIN_SPECIFIC_RULES', 'Utilise les documents disponibles pour fournir des réponses pertinentes et utiles.')}`,
         ],
       ]);
       this.stuffChainNoHistory = await createStuffDocumentsChain({
@@ -533,11 +533,11 @@ export class LangchainService {
       // Create welcome prompt
       const welcomePrompt = `${systemPrompt}
 
-Tu es Oto, un assistant virtuel spécialisé en nutrition et bien-être.
+Tu es ${this.configService.get<string>('ASSISTANT_NAME', 'Assistant')}, un ${this.configService.get<string>('ASSISTANT_ROLE', 'assistant virtuel intelligent')}.
 Un nouvel utilisateur vient de créer sa première conversation avec toi.
 
 Génère un message d'accueil chaleureux et engageant qui :
-- Te présente comme Oto, assistant en nutrition
+- Te présente comme ${this.configService.get<string>('ASSISTANT_NAME', 'Assistant')}, ${this.configService.get<string>('ASSISTANT_ROLE', 'assistant virtuel')}
 - Explique brièvement ton rôle et tes compétences
 - Montre de l'empathie et de la bienveillance
 - Invite l'utilisateur à poser ses questions
