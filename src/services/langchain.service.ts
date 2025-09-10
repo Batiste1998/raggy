@@ -349,6 +349,50 @@ Réponse:`;
   }
 
   /**
+   * Generate a welcome message for a new user
+   */
+  async generateWelcomeMessage(userId: string): Promise<string> {
+    try {
+      this.logger.log(`Generating welcome message for user: ${userId}`);
+
+      // Get system prompt from environment variables
+      const systemPrompt = this.configService.get<string>('SYSTEM_PROMPT', '');
+
+      // Create welcome prompt
+      const welcomePrompt = `${systemPrompt}
+
+Tu es Oto, un assistant virtuel spécialisé en nutrition et bien-être.
+Un nouvel utilisateur vient de créer sa première conversation avec toi.
+
+Génère un message d'accueil chaleureux et engageant qui :
+- Te présente comme Oto, assistant en nutrition
+- Explique brièvement ton rôle et tes compétences
+- Montre de l'empathie et de la bienveillance
+- Invite l'utilisateur à poser ses questions
+- Utilise un ton professionnel mais amical
+
+Message d'accueil personnalisé :`;
+
+      this.logger.log('Calling chat model for welcome message...');
+      const response = await this.chatModel.invoke(welcomePrompt);
+      this.logger.log('Welcome message generated successfully');
+
+      const welcomeMessage =
+        typeof response.content === 'string'
+          ? response.content
+          : JSON.stringify(response.content);
+
+      this.logger.log(
+        `Welcome message length: ${welcomeMessage.length} characters`,
+      );
+      return welcomeMessage;
+    } catch (error) {
+      this.logger.error('Failed to generate welcome message', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete all chunks for a resource
    */
   async deleteResourceChunks(resourceId: string): Promise<void> {

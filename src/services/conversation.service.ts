@@ -4,7 +4,13 @@ import { Repository } from 'typeorm';
 import { User } from '../database/entities/user.entity';
 import { Conversation } from '../database/entities/conversation.entity';
 import { Message } from '../database/entities/message.entity';
-import { CreateConversationDto, ConversationResponseDto } from '../dto';
+import {
+  CreateConversationDto,
+  ConversationResponseDto,
+  MessageResponseDto,
+} from '../dto';
+import { LangchainService } from './langchain.service';
+import { MessageService } from './message.service';
 
 @Injectable()
 export class ConversationService {
@@ -17,6 +23,8 @@ export class ConversationService {
     private readonly conversationRepository: Repository<Conversation>,
     @InjectRepository(Message)
     private readonly messageRepository: Repository<Message>,
+    private readonly langchainService: LangchainService,
+    private readonly messageService: MessageService,
   ) {}
 
   /**
@@ -25,6 +33,7 @@ export class ConversationService {
   async createConversation(dto: CreateConversationDto): Promise<{
     conversation: ConversationResponseDto;
     user: User;
+    welcome_message?: MessageResponseDto;
   }> {
     try {
       this.logger.log(`Creating conversation for user: ${dto.user_id}`);
@@ -40,6 +49,16 @@ export class ConversationService {
         await this.userRepository.save(user);
       }
 
+      // Check if this is the user's first conversation
+      const userConversationCount = await this.conversationRepository.count({
+        where: { user_id: dto.user_id },
+      });
+
+      const isFirstConversation = userConversationCount === 0;
+      this.logger.log(
+        `Is first conversation for user ${dto.user_id}: ${isFirstConversation}`,
+      );
+
       // Create conversation
       const conversation = this.conversationRepository.create({
         user_id: dto.user_id,
@@ -48,8 +67,41 @@ export class ConversationService {
       });
 
       await this.conversationRepository.save(conversation);
-
       this.logger.log(`Conversation created: ${conversation.id}`);
+
+      let welcomeMessage: MessageResponseDto | undefined;
+
+      // Generate welcome message for first conversation (if no first_message provided and not skipped)
+      if (
+        isFirstConversation &&
+        !dto.first_message &&
+        !dto.skip_welcome_message
+      ) {
+        this.logger.log('Generating welcome message for first conversation');
+
+        try {
+          const welcomeContent =
+            await this.langchainService.generateWelcomeMessage(dto.user_id);
+
+          welcomeMessage = await this.messageService.createMessage(
+            conversation.id,
+            {
+              content: welcomeContent,
+              role: 'assistant',
+            },
+          );
+
+          this.logger.log(
+            `Welcome message created for conversation: ${conversation.id}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            'Failed to generate welcome message, continuing without it',
+            error,
+          );
+          // Continue without welcome message if generation fails
+        }
+      }
 
       return {
         conversation: {
@@ -61,6 +113,7 @@ export class ConversationService {
           updatedAt: conversation.updatedAt,
         },
         user,
+        welcome_message: welcomeMessage,
       };
     } catch (error) {
       this.logger.error('Failed to create conversation', error);
@@ -104,7 +157,7 @@ export class ConversationService {
    */
   async getConversation(conversationId: string): Promise<{
     conversation: ConversationResponseDto;
-    messages: any[];
+    messages: MessageResponseDto[];
   }> {
     try {
       this.logger.log(`Getting conversation: ${conversationId}`);

@@ -5,8 +5,16 @@ import { memoryStorage } from 'multer';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
-import { LangchainService } from './services';
-import { ResourcesController } from './controllers';
+import {
+  LangchainService,
+  ConversationService,
+  MessageService,
+} from './services';
+import {
+  ResourcesController,
+  ConversationController,
+  MessageController,
+} from './controllers';
 
 @Module({
   imports: [
@@ -20,8 +28,18 @@ import { ResourcesController } from './controllers';
       storage: memoryStorage(),
     }),
   ],
-  controllers: [AppController, ResourcesController],
-  providers: [AppService, LangchainService],
+  controllers: [
+    AppController,
+    ResourcesController,
+    ConversationController,
+    MessageController,
+  ],
+  providers: [
+    AppService,
+    LangchainService,
+    ConversationService,
+    MessageService,
+  ],
   exports: [LangchainService],
 })
 export class AppModule {}

@@ -222,7 +222,8 @@ export class ResourcesController {
   }
 
   /**
-   * POST /resources/chat - Test RAG functionality
+   * POST /resources/chat - Legacy RAG endpoint (DEPRECATED)
+   * @deprecated Use /conversations endpoint instead for better conversation management
    * Returns: RAG response based on uploaded documents
    */
   @Post('chat')
@@ -230,6 +231,10 @@ export class ResourcesController {
     @Body() chatDto: ChatDto,
   ): Promise<{ success: boolean; query: string; response: string }> {
     try {
+      this.logger.warn(
+        'Using deprecated /resources/chat endpoint. Consider using /conversations instead.',
+      );
+
       const response = await this.langchainService.generateRAGResponse(
         chatDto.query,
       );

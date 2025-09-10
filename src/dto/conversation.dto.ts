@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateConversationDto {
   @IsString()
@@ -11,6 +11,10 @@ export class CreateConversationDto {
   @IsOptional()
   @IsString()
   first_message?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  skip_welcome_message?: boolean; // Skip welcome message generation for first conversations
 }
 
 export class ConversationResponseDto {
