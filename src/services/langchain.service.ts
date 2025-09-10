@@ -9,6 +9,12 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { OllamaEmbeddings } from '@langchain/ollama';
 import { ChatOllama } from '@langchain/ollama';
 import { Document } from '@langchain/core/documents';
+import { RunnableWithMessageHistory } from '@langchain/core/runnables';
+import { InMemoryChatMessageHistory } from '@langchain/core/chat_history';
+import {
+  ChatPromptTemplate,
+  MessagesPlaceholder,
+} from '@langchain/core/prompts';
 
 // Document loaders
 import { CSVLoader } from '@langchain/community/document_loaders/fs/csv';
@@ -21,6 +27,9 @@ import { writeFile, unlink } from 'fs/promises';
 
 // Entities
 import { DocumentChunk } from '../database';
+
+// Services
+import { MessageService } from './message.service';
 
 // Interface for raw SQL query results
 interface RawChunkResult {
@@ -37,11 +46,14 @@ export class LangchainService {
   private embeddings: OllamaEmbeddings;
   private chatModel: ChatOllama;
   private textSplitter: RecursiveCharacterTextSplitter;
+  private ragChainWithHistory: RunnableWithMessageHistory<any, any>;
+  private messageHistories: Record<string, InMemoryChatMessageHistory> = {};
 
   constructor(
     private configService: ConfigService,
     @InjectRepository(DocumentChunk)
     private documentChunkRepository: Repository<DocumentChunk>,
+    private readonly messageService: MessageService,
   ) {
     void this.initializeServices();
   }
@@ -75,6 +87,9 @@ export class LangchainService {
       // Initialize vector store
       await this.initializeVectorStore();
 
+      // Initialize RunnableWithMessageHistory for conversation memory
+      this.initializeRunnableWithHistory();
+
       this.logger.log('LangChain services initialized successfully');
     } catch (error) {
       this.logger.error('Failed to initialize LangChain services', error);
@@ -85,6 +100,62 @@ export class LangchainService {
   private async initializeVectorStore() {
     // This will be implemented when we have the database connection
     // For now, we'll initialize it when needed
+  }
+
+  private initializeRunnableWithHistory() {
+    // Create a prompt template with message history placeholder
+    const systemPrompt = this.configService.get<string>('SYSTEM_PROMPT', '');
+    const prompt = ChatPromptTemplate.fromMessages([
+      ['system', systemPrompt],
+      new MessagesPlaceholder('chat_history'),
+      ['human', '{input}'],
+    ]);
+
+    // Create a simple chain that combines prompt and model
+    const chain = prompt.pipe(this.chatModel);
+
+    // Create RunnableWithMessageHistory
+    this.ragChainWithHistory = new RunnableWithMessageHistory({
+      runnable: chain,
+      getMessageHistory: (sessionId: string) =>
+        this.getMessageHistory(sessionId),
+      inputMessagesKey: 'input',
+      historyMessagesKey: 'chat_history',
+    });
+  }
+
+  private getMessageHistory(sessionId: string): InMemoryChatMessageHistory {
+    if (!this.messageHistories[sessionId]) {
+      this.messageHistories[sessionId] = new InMemoryChatMessageHistory();
+    }
+    return this.messageHistories[sessionId];
+  }
+
+  /**
+   * Get conversation history for context
+   */
+  private async getConversationHistory(
+    conversationId: string,
+  ): Promise<string> {
+    try {
+      const messages =
+        await this.messageService.getConversationMessages(conversationId);
+
+      // Format conversation history for the prompt
+      const history = messages
+        .filter((msg) => msg.role === 'user') // Focus on user messages for context
+        .slice(-5) // Keep only last 5 user messages to avoid token limits
+        .map((msg) => `User: ${msg.content}`)
+        .join('\n');
+
+      return history;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get conversation history for ${conversationId}`,
+        error,
+      );
+      return ''; // Return empty string if history retrieval fails
+    }
   }
 
   /**
@@ -310,15 +381,14 @@ export class LangchainService {
 
       // Build conversation context if available
       let conversationContext = '';
-      if (conversationId && userId) {
-        // TODO: Inject MessageService to get conversation history
-        // For now, we'll add a placeholder for conversation context
-        conversationContext = `
+      if (conversationId) {
+        const history = await this.getConversationHistory(conversationId);
+        if (history) {
+          conversationContext = `
 
-Conversation Context:
-- User ID: ${userId}
-- Conversation ID: ${conversationId}
-- Previous messages would be included here for context`;
+Conversation History:
+${history}`;
+        }
       }
 
       // Generate response using chat model with Oto system prompt
@@ -344,6 +414,61 @@ Réponse:`;
       return finalResponse;
     } catch (error) {
       this.logger.error('Failed to generate RAG response', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate RAG response with conversation memory using RunnableWithMessageHistory
+   */
+  async generateRAGResponseWithMemory(
+    query: string,
+    conversationId: string,
+    userId?: string,
+  ): Promise<string> {
+    try {
+      this.logger.log(
+        `Starting RAG response with memory for query: "${query}"`,
+      );
+      this.logger.log(`Conversation: ${conversationId}, User: ${userId}`);
+
+      // Find similar documents using the query
+      const similarDocs = await this.searchSimilar(query, 5);
+      const context = similarDocs.map((doc) => doc.content).join('\n\n');
+
+      // Use RunnableWithMessageHistory for conversation memory
+      const response: unknown = await this.ragChainWithHistory.invoke(
+        {
+          input: `Context (documents RAG):
+${context}
+
+Question: ${query}
+
+Réponse:`,
+        },
+        {
+          configurable: {
+            sessionId: conversationId,
+          },
+        },
+      );
+
+      let finalResponse: string;
+      if (response && typeof response === 'object' && 'content' in response) {
+        const content = (response as { content: unknown }).content;
+        finalResponse =
+          typeof content === 'string' ? content : JSON.stringify(content);
+      } else {
+        finalResponse =
+          typeof response === 'string' ? response : JSON.stringify(response);
+      }
+
+      this.logger.log(
+        `RAG response with memory generated, length: ${finalResponse.length}`,
+      );
+      return finalResponse;
+    } catch (error) {
+      this.logger.error('Failed to generate RAG response with memory', error);
       throw error;
     }
   }
