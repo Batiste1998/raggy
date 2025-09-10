@@ -32,9 +32,6 @@ import { writeFile, unlink } from 'fs/promises';
 // Entities
 import { DocumentChunk } from '../database';
 
-// Services
-import { MessageService } from './message.service';
-
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 
 // Interface for raw SQL query results
@@ -76,9 +73,7 @@ export class LangchainService {
   private embeddings: OllamaEmbeddings;
   private chatModel: ChatOllama;
   private textSplitter: RecursiveCharacterTextSplitter;
-  private ragChainWithHistory: RunnableWithMessageHistory<any, any>;
   private messageHistories: Record<string, InMemoryChatMessageHistory> = {};
-
   private retriever: CustomRetriever;
   private historyAwareRetriever: any;
   private stuffChain: any;
@@ -91,7 +86,6 @@ export class LangchainService {
     private configService: ConfigService,
     @InjectRepository(DocumentChunk)
     private documentChunkRepository: Repository<DocumentChunk>,
-    private readonly messageService: MessageService,
   ) {
     void this.initializeServices();
   }
@@ -201,60 +195,11 @@ export class LangchainService {
     // For now, we'll initialize it when needed
   }
 
-  private initializeRunnableWithHistory() {
-    // Create a prompt template with message history placeholder
-    const systemPrompt = this.configService.get<string>('SYSTEM_PROMPT', '');
-    const prompt = ChatPromptTemplate.fromMessages([
-      ['system', systemPrompt],
-      new MessagesPlaceholder('chat_history'),
-      ['human', '{input}'],
-    ]);
-
-    // Create a simple chain that combines prompt and model
-    const chain = prompt.pipe(this.chatModel);
-
-    // Create RunnableWithMessageHistory
-    this.ragChainWithHistory = new RunnableWithMessageHistory({
-      runnable: chain,
-      getMessageHistory: (sessionId: string) =>
-        this.getMessageHistory(sessionId),
-      inputMessagesKey: 'input',
-      historyMessagesKey: 'chat_history',
-    });
-  }
-
   private getMessageHistory(sessionId: string): InMemoryChatMessageHistory {
     if (!this.messageHistories[sessionId]) {
       this.messageHistories[sessionId] = new InMemoryChatMessageHistory();
     }
     return this.messageHistories[sessionId];
-  }
-
-  /**
-   * Get conversation history for context
-   */
-  private async getConversationHistory(
-    conversationId: string,
-  ): Promise<string> {
-    try {
-      const messages =
-        await this.messageService.getConversationMessages(conversationId);
-
-      // Format conversation history for the prompt
-      const history = messages
-        .filter((msg) => msg.role === 'user') // Focus on user messages for context
-        .slice(-5) // Keep only last 5 user messages to avoid token limits
-        .map((msg) => `User: ${msg.content}`)
-        .join('\n');
-
-      return history;
-    } catch (error) {
-      this.logger.warn(
-        `Failed to get conversation history for ${conversationId}`,
-        error,
-      );
-      return ''; // Return empty string if history retrieval fails
-    }
   }
 
   /**

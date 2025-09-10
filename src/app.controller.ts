@@ -9,7 +9,7 @@ import { AppService } from './app.service';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Resource, DocumentChunk } from './database';
+import { Resource } from './database';
 
 // Default maximum file size: 10MB in bytes
 const DEFAULT_MAX_FILE_SIZE_B = 10485760;
@@ -21,8 +21,6 @@ export class AppController {
     private readonly configService: ConfigService,
     @InjectRepository(Resource)
     private readonly resourceRepository: Repository<Resource>,
-    @InjectRepository(DocumentChunk)
-    private readonly documentChunkRepository: Repository<DocumentChunk>,
   ) {}
 
   @Get()
