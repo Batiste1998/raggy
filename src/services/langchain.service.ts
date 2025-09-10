@@ -276,9 +276,24 @@ export class LangchainService {
   /**
    * Generate RAG response using system prompt from .env
    */
-  async generateRAGResponse(query: string): Promise<string> {
+  async generateRAGResponse(query: string): Promise<string>;
+  async generateRAGResponse(
+    query: string,
+    conversationId?: string,
+    userId?: string,
+  ): Promise<string>;
+  async generateRAGResponse(
+    query: string,
+    conversationId?: string,
+    userId?: string,
+  ): Promise<string> {
     try {
       this.logger.log(`Starting RAG response generation for query: "${query}"`);
+      if (conversationId) {
+        this.logger.log(
+          `Conversation context: ${conversationId}, User: ${userId}`,
+        );
+      }
 
       // Find similar documents using the query
       this.logger.log('Searching for similar documents...');
@@ -293,10 +308,23 @@ export class LangchainService {
       const systemPrompt = this.configService.get<string>('SYSTEM_PROMPT', '');
       this.logger.log(`System prompt length: ${systemPrompt.length}`);
 
-      // Generate response using chat model with Oto system prompt
-      const prompt = `${systemPrompt}
+      // Build conversation context if available
+      let conversationContext = '';
+      if (conversationId && userId) {
+        // TODO: Inject MessageService to get conversation history
+        // For now, we'll add a placeholder for conversation context
+        conversationContext = `
 
-Context (documents RAG): 
+Conversation Context:
+- User ID: ${userId}
+- Conversation ID: ${conversationId}
+- Previous messages would be included here for context`;
+      }
+
+      // Generate response using chat model with Oto system prompt
+      const prompt = `${systemPrompt}${conversationContext}
+
+Context (documents RAG):
 ${context}
 
 Question: ${query}
