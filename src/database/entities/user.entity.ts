@@ -1,6 +1,7 @@
 import {
   Entity,
-  PrimaryColumn,
+  PrimaryGeneratedColumn,
+  Column,
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
@@ -9,8 +10,11 @@ import { Conversation } from './conversation.entity';
 
 @Entity('users')
 export class User {
-  @PrimaryColumn()
-  id: string; // user_id from external API
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column('simple-array', { default: '' })
+  required_attributes: string[];
 
   @CreateDateColumn()
   createdAt: Date;

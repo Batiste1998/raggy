@@ -39,15 +39,16 @@ export class ConversationService {
     try {
       this.logger.log(`Creating conversation for user: ${dto.user_id}`);
 
-      // Find or create user
-      let user = await this.userRepository.findOne({
+      // Check if user exists (no longer creating users automatically)
+      const user = await this.userRepository.findOne({
         where: { id: dto.user_id },
       });
 
       if (!user) {
-        this.logger.log(`Creating new user: ${dto.user_id}`);
-        user = this.userRepository.create({ id: dto.user_id });
-        await this.userRepository.save(user);
+        this.logger.warn(
+          `User not found for conversation creation: ${dto.user_id}`,
+        );
+        throw new NotFoundException(`User not found: ${dto.user_id}`);
       }
 
       // Check if this is the user's first conversation
@@ -255,15 +256,16 @@ export class ConversationService {
     try {
       this.logger.log(`Creating simple conversation for user: ${dto.user}`);
 
-      // Find or create user
-      let user = await this.userRepository.findOne({
+      // Check if user exists (no longer creating users automatically)
+      const user = await this.userRepository.findOne({
         where: { id: dto.user },
       });
 
       if (!user) {
-        this.logger.log(`Creating new user: ${dto.user}`);
-        user = this.userRepository.create({ id: dto.user });
-        await this.userRepository.save(user);
+        this.logger.warn(
+          `User not found for conversation creation: ${dto.user}`,
+        );
+        throw new NotFoundException(`User not found: ${dto.user}`);
       }
 
       // Check if this is the user's first conversation

@@ -10,11 +10,13 @@ import {
   LangchainService,
   ConversationService,
   MessageService,
+  UserService,
 } from './services';
 import {
   ResourcesController,
   ConversationController,
   MessageController,
+  UserController,
 } from './controllers';
 import { ResponseInterceptor } from './interceptors';
 
@@ -35,12 +37,14 @@ import { ResponseInterceptor } from './interceptors';
     ResourcesController,
     ConversationController,
     MessageController,
+    UserController,
   ],
   providers: [
     AppService,
     LangchainService,
     ConversationService,
     MessageService,
+    UserService,
     {
       provide: APP_INTERCEPTOR,
       useClass: ResponseInterceptor,
