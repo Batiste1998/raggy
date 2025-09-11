@@ -153,14 +153,11 @@ curl -X DELETE http://localhost:3000/resources/123e4567-e89b-12d3-a456-426614174
 ### POST /conversations
 
 **Description**: Crée une nouvelle conversation
-**Body**:
+**Body**: 
 
 ```json
 {
-  "user_id": "user-uuid",
-  "title": "Titre optionnel",
-  "first_message": "Message initial optionnel",
-  "skip_welcome_message": false
+  "user": "user-id"
 }
 ```
 
@@ -170,9 +167,7 @@ curl -X DELETE http://localhost:3000/resources/123e4567-e89b-12d3-a456-426614174
 curl -X POST http://localhost:3000/conversations \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": "user-123",
-    "title": "Discussion nutrition",
-    "first_message": "Bonjour, j'\''ai des questions sur l'\''alimentation"
+    "user": "user-123"
   }'
 ```
 
@@ -180,33 +175,17 @@ curl -X POST http://localhost:3000/conversations \
 
 ```json
 {
-  "conversation": {
-    "id": "conv-uuid",
-    "user_id": "user-123",
-    "title": "Discussion nutrition",
-    "createdAt": "2024-01-15T10:30:00.000Z",
-    "updatedAt": "2024-01-15T10:30:00.000Z"
-  },
-  "first_message": {
-    "id": "msg-uuid",
-    "content": "Bonjour...",
-    "role": "user",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  },
-  "ai_response": {
-    "id": "msg-uuid-2",
-    "content": "Réponse générée par l'\''IA...",
-    "role": "assistant",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  },
-  "welcome_message": {
-    "id": "msg-uuid-3",
-    "content": "Message de bienvenue...",
-    "role": "assistant",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  }
+  "id": "conv-uuid",
+  "message": "Conversation created successfully",
+  "welcome_message": "Bonjour ! Je suis votre assistant...",
+  "statusCode": 200
 }
 ```
+
+**Note**: Le champ `welcome_message` n'est présent que pour la toute première conversation de l'utilisateur.
+
+**Erreurs**:
+- `500`: Erreur système
 
 ### GET /conversations
 

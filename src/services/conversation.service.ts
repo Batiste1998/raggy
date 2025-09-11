@@ -6,6 +6,7 @@ import { Conversation } from '../database/entities/conversation.entity';
 import { Message } from '../database/entities/message.entity';
 import {
   CreateConversationDto,
+  CreateSimpleConversationDto,
   ConversationResponseDto,
   MessageResponseDto,
 } from '../dto';
@@ -240,6 +241,92 @@ export class ConversationService {
         `Failed to delete conversation ${conversationId}`,
         error,
       );
+      throw error;
+    }
+  }
+
+  /**
+   * Create a simple conversation (new API with 404 for unknown users)
+   */
+  async createSimpleConversation(dto: CreateSimpleConversationDto): Promise<{
+    conversation: ConversationResponseDto;
+    welcome_message?: MessageResponseDto;
+  }> {
+    try {
+      this.logger.log(`Creating simple conversation for user: ${dto.user}`);
+
+      // Find or create user
+      let user = await this.userRepository.findOne({
+        where: { id: dto.user },
+      });
+
+      if (!user) {
+        this.logger.log(`Creating new user: ${dto.user}`);
+        user = this.userRepository.create({ id: dto.user });
+        await this.userRepository.save(user);
+      }
+
+      // Check if this is the user's first conversation
+      const userConversationCount = await this.conversationRepository.count({
+        where: { user_id: dto.user },
+      });
+
+      const isFirstConversation = userConversationCount === 0;
+      this.logger.log(
+        `Is first conversation for user ${dto.user}: ${isFirstConversation}`,
+      );
+
+      // Create conversation
+      const conversation = this.conversationRepository.create({
+        user_id: dto.user,
+        user: user,
+      });
+
+      await this.conversationRepository.save(conversation);
+      this.logger.log(`Simple conversation created: ${conversation.id}`);
+
+      let welcomeMessage: MessageResponseDto | undefined;
+
+      // Generate welcome message for first conversation only
+      if (isFirstConversation) {
+        this.logger.log('Generating welcome message for first conversation');
+
+        try {
+          const welcomeContent =
+            await this.langchainService.generateWelcomeMessage(dto.user);
+
+          welcomeMessage = await this.messageService.createMessage(
+            conversation.id,
+            {
+              content: welcomeContent,
+              role: 'assistant',
+            },
+          );
+
+          this.logger.log(
+            `Welcome message created for conversation: ${conversation.id}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            'Failed to generate welcome message, continuing without it',
+            error,
+          );
+        }
+      }
+
+      return {
+        conversation: {
+          id: conversation.id,
+          user_id: conversation.user_id,
+          title: conversation.title,
+          summary: conversation.summary,
+          createdAt: conversation.createdAt,
+          updatedAt: conversation.updatedAt,
+        },
+        welcome_message: welcomeMessage,
+      };
+    } catch (error) {
+      this.logger.error('Failed to create simple conversation', error);
       throw error;
     }
   }

@@ -14,6 +14,7 @@ import { MessageService } from '../services';
 import { LangchainService } from '../services';
 import {
   CreateConversationDto,
+  CreateSimpleConversationDto,
   ConversationResponseDto,
   GetConversationsDto,
   SendMessageDto,
@@ -31,60 +32,39 @@ export class ConversationController {
   ) {}
 
   /**
-   * POST /conversations - Create a new conversation
-   * Creates a conversation for a user and optionally sends the first message
+   * POST /conversations - Create a new conversation (simplified API)
+   * Creates a conversation for a user with welcome message for first conversations
    */
   @Post()
-  async createConversation(@Body() dto: CreateConversationDto): Promise<{
-    conversation: ConversationResponseDto;
-    first_message?: MessageResponseDto;
-    ai_response?: MessageResponseDto;
-    welcome_message?: MessageResponseDto;
+  async createConversation(@Body() dto: CreateSimpleConversationDto): Promise<{
+    id: string;
+    message: string;
+    welcome_message?: string;
   }> {
     try {
-      this.logger.log(`Creating conversation for user: ${dto.user_id}`);
+      this.logger.log(`Creating conversation for user: ${dto.user}`);
 
-      // Create conversation (with automatic welcome message for first conversations)
+      // Create conversation using new service method (throws 404 if user not found)
       const { conversation, welcome_message } =
-        await this.conversationService.createConversation(dto);
-
-      let firstMessage: MessageResponseDto | undefined;
-      let aiResponse: MessageResponseDto | undefined;
-
-      // If first message is provided, create it and generate AI response
-      if (dto.first_message) {
-        // Create user message
-        firstMessage = await this.messageService.createMessage(
-          conversation.id,
-          {
-            content: dto.first_message,
-            role: 'user',
-          },
-        );
-
-        // Generate AI response using RAG with conversation context
-        const aiResponseContent =
-          await this.langchainService.generateRAGResponse(
-            dto.first_message,
-            conversation.id,
-            dto.user_id,
-          );
-
-        // Create AI message
-        aiResponse = await this.messageService.createMessage(conversation.id, {
-          content: aiResponseContent,
-          role: 'assistant',
-        });
-      }
+        await this.conversationService.createSimpleConversation(dto);
 
       this.logger.log(`Conversation created: ${conversation.id}`);
 
-      return {
-        conversation,
-        first_message: firstMessage,
-        ai_response: aiResponse,
-        welcome_message: welcome_message,
+      const response: {
+        id: string;
+        message: string;
+        welcome_message?: string;
+      } = {
+        id: conversation.id,
+        message: 'Conversation created successfully',
       };
+
+      // Add welcome message only if it exists
+      if (welcome_message) {
+        response.welcome_message = welcome_message.content;
+      }
+
+      return response;
     } catch (error) {
       this.logger.error('Failed to create conversation', error);
 

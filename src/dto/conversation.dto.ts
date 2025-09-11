@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNotEmpty } from 'class-validator';
 
 export class CreateConversationDto {
   @IsString()
@@ -15,6 +15,12 @@ export class CreateConversationDto {
   @IsOptional()
   @IsBoolean()
   skip_welcome_message?: boolean; // Skip welcome message generation for first conversations
+}
+
+export class CreateSimpleConversationDto {
+  @IsString({ message: 'User ID must be provided' })
+  @IsNotEmpty({ message: 'User ID cannot be empty' })
+  user: string;
 }
 
 export class ConversationResponseDto {
