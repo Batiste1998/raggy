@@ -167,10 +167,8 @@ export class ResourcesController {
       this.logger.log(`Resource deleted: ${id}`);
 
       return {
-        success: true,
         id,
         message: 'Resource deleted successfully',
-        status: HttpStatus.OK,
       };
     } catch (error) {
       this.logger.error(`Failed to delete resource ${id}`, error);

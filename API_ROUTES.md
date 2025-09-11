@@ -89,6 +89,7 @@ curl -X POST http://localhost:3000/resources \
 
 **Description**: Supprime une ressource et ses chunks
 **Paramètres**: `id` (UUID de la ressource)
+**Body**: Aucun
 
 **Exemple**:
 
@@ -100,12 +101,15 @@ curl -X DELETE http://localhost:3000/resources/123e4567-e89b-12d3-a456-426614174
 
 ```json
 {
-  "success": true,
   "id": "uuid-resource-id",
   "message": "Resource deleted successfully",
-  "status": 200
+  "statusCode": 200
 }
 ```
+
+**Erreurs**:
+- `404`: ID de la ressource inconnue
+- `500`: Erreur système
 
 ### GET /resources
 
