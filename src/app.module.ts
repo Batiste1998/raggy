@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { memoryStorage } from 'multer';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -15,6 +16,7 @@ import {
   ConversationController,
   MessageController,
 } from './controllers';
+import { ResponseInterceptor } from './interceptors';
 
 @Module({
   imports: [
@@ -39,6 +41,10 @@ import {
     LangchainService,
     ConversationService,
     MessageService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
   ],
   exports: [LangchainService],
 })

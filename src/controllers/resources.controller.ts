@@ -75,7 +75,7 @@ export class ResourcesController {
       if (file.size > maxFileSizeBytes) {
         throw new HttpException(
           `File size exceeds maximum limit of ${maxFileSizeMB}MB`,
-          HttpStatus.BAD_REQUEST,
+          HttpStatus.PAYLOAD_TOO_LARGE,
         );
       }
 
@@ -90,7 +90,7 @@ export class ResourcesController {
       if (!allowedMimeTypes.includes(file.mimetype)) {
         throw new HttpException(
           `Unsupported file type: ${file.mimetype}. Allowed types: ${allowedMimeTypes.join(', ')}`,
-          HttpStatus.BAD_REQUEST,
+          HttpStatus.NOT_FOUND,
         );
       }
 
@@ -116,7 +116,6 @@ export class ResourcesController {
       this.logger.log(`Resource uploaded and processed: ${resourceId}`);
 
       return {
-        success: true,
         id: resourceId,
         message: 'File uploaded and processed successfully',
       };

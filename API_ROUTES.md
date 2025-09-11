@@ -23,7 +23,7 @@ Raggy est un chatbot RAG (Retrieval-Augmented Generation) modulaire avec une API
 {
   "message": "Configuration loaded successfully",
   "max_file_size_bytes": 10485760,
-  "status_code": 200
+  "statusCode": 200
 }
 ```
 
@@ -41,7 +41,7 @@ Raggy est un chatbot RAG (Retrieval-Augmented Generation) modulaire avec une API
 ```json
 {
   "message": "Database reset completed successfully",
-  "status_code": 200
+  "statusCode": 200
 }
 ```
 
@@ -53,14 +53,9 @@ Raggy est un chatbot RAG (Retrieval-Augmented Generation) modulaire avec une API
 ### POST /resources
 
 **Description**: Upload et traitement d'un fichier
-**Content-Type**: `multipart/form-data`
-**Paramètres**:
-
-- `file`: Fichier à uploader (requis)
-- `mimeType`: Type MIME optionnel pour validation
+**Body**: `multipart/form-data` avec champ `file` (requis)
 
 **Types de fichiers supportés**:
-
 - `text/csv`
 - `application/pdf`
 - `text/plain`
@@ -72,19 +67,23 @@ Raggy est un chatbot RAG (Retrieval-Augmented Generation) modulaire avec une API
 
 ```bash
 curl -X POST http://localhost:3000/resources \
-  -F "file=@document.pdf" \
-  -F "mimeType=application/pdf"
+  -F "file=@document.pdf"
 ```
 
-**Réponse de succès**:
+**Réponse**:
 
 ```json
 {
-  "success": true,
   "id": "uuid-resource-id",
-  "message": "File uploaded and processed successfully"
+  "message": "File uploaded and processed successfully",
+  "statusCode": 200
 }
 ```
+
+**Erreurs**:
+- `404`: MIME type différent des types acceptés / format différent
+- `413`: Fichier trop lourd (taille supérieure à max_file_size_bytes)
+- `500`: Erreur système
 
 ### DELETE /resources/:id
 

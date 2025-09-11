@@ -51,7 +51,6 @@ export class AppController {
       return {
         message: 'Configuration loaded successfully',
         max_file_size_bytes: maxFileSizeBytes,
-        status_code: HttpStatus.OK,
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -76,7 +75,6 @@ export class AppController {
 
       return {
         message: 'Database reset completed successfully',
-        status_code: HttpStatus.OK,
       };
     } catch {
       throw new HttpException(
