@@ -177,7 +177,6 @@ export class ConversationController {
     }
   }
 
-
   /**
    * GET /conversations/:id/messages - Get all messages for a conversation
    */

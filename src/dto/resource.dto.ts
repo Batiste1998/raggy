@@ -1,3 +1,10 @@
+import { IsUUID } from 'class-validator';
+
+export class ResourceParamDto {
+  @IsUUID('4', { message: 'ID must be a valid UUID' })
+  id: string;
+}
+
 export class ResourceResponseDto {
   id: string;
   mimeType: string;

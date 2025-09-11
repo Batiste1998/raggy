@@ -10,17 +10,19 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, QueryFailedError } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 
 // Services
 import { LangchainService } from '../services';
 import { Resource } from '../database';
-import { ChatDto } from '../dto';
+import { ChatDto, ResourceParamDto } from '../dto';
 
 // Default maximum file size: 10MB in bytes
 const DEFAULT_MAX_FILE_SIZE_B = 10485760;
@@ -150,13 +152,21 @@ export class ResourcesController {
    * Returns: Success message
    */
   @Delete(':id')
-  async deleteResource(@Param('id') id: string) {
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async deleteResource(@Param() params: ResourceParamDto) {
+    const { id } = params;
+
     try {
+      this.logger.log(`Attempting to delete resource: ${id}`);
+
       // Check if resource exists
       const resource = await this.resourceRepository.findOne({ where: { id } });
       if (!resource) {
+        this.logger.warn(`Resource not found for deletion: ${id}`);
         throw new HttpException('Resource not found', HttpStatus.NOT_FOUND);
       }
+
+      this.logger.log(`Found resource ${id}, proceeding with deletion`);
 
       // Delete chunks first (cascade will handle this, but explicit is better)
       await this.langchainService.deleteResourceChunks(id);
@@ -164,19 +174,47 @@ export class ResourcesController {
       // Delete resource
       await this.resourceRepository.delete(id);
 
-      this.logger.log(`Resource deleted: ${id}`);
+      this.logger.log(`Resource deleted successfully: ${id}`);
 
       return {
         id,
         message: 'Resource deleted successfully',
       };
     } catch (error) {
-      this.logger.error(`Failed to delete resource ${id}`, error);
-
+      // Handle validation pipe errors (will be thrown before reaching here due to @UsePipes)
       if (error instanceof HttpException) {
+        this.logger.error(
+          `HTTP error deleting resource ${id}: ${error.message}`,
+          error.getResponse(),
+        );
         throw error;
       }
 
+      // Handle PostgreSQL/TypeORM specific errors
+      if (error instanceof QueryFailedError) {
+        this.logger.error(`Database error deleting resource ${id}:`, {
+          message: error.message,
+          query: error.query,
+          parameters: error.parameters,
+          driverError: String(error.driverError),
+        });
+
+        // Check if it's a UUID format error
+        if (error.message.includes('invalid input syntax for type uuid')) {
+          throw new HttpException(
+            'Invalid resource ID format',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+
+        throw new HttpException(
+          'Database error occurred while deleting resource',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+
+      // Generic error handling
+      this.logger.error(`Unexpected error deleting resource ${id}`, error);
       throw new HttpException(
         'Failed to delete resource',
         HttpStatus.INTERNAL_SERVER_ERROR,

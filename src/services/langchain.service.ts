@@ -198,10 +198,12 @@ export class LangchainService {
     // For now, we'll initialize it when needed
   }
 
-  private async getMessageHistory(sessionId: string): Promise<InMemoryChatMessageHistory> {
+  private async getMessageHistory(
+    sessionId: string,
+  ): Promise<InMemoryChatMessageHistory> {
     if (!this.messageHistories[sessionId]) {
       this.messageHistories[sessionId] = new InMemoryChatMessageHistory();
-      
+
       // Load existing messages from database
       await this.loadMessagesFromDatabase(sessionId);
     }
@@ -211,7 +213,9 @@ export class LangchainService {
   /**
    * Load existing messages from database into memory history
    */
-  private async loadMessagesFromDatabase(conversationId: string): Promise<void> {
+  private async loadMessagesFromDatabase(
+    conversationId: string,
+  ): Promise<void> {
     try {
       const messages = await this.messageRepository.find({
         where: { conversation_id: conversationId },
@@ -219,7 +223,7 @@ export class LangchainService {
       });
 
       const chatHistory = this.messageHistories[conversationId];
-      
+
       for (const message of messages) {
         if (message.role === 'user') {
           await chatHistory.addMessage(new HumanMessage(message.content));
@@ -228,9 +232,14 @@ export class LangchainService {
         }
       }
 
-      this.logger.log(`Loaded ${messages.length} messages from database for conversation ${conversationId}`);
+      this.logger.log(
+        `Loaded ${messages.length} messages from database for conversation ${conversationId}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to load messages from database for conversation ${conversationId}`, error);
+      this.logger.error(
+        `Failed to load messages from database for conversation ${conversationId}`,
+        error,
+      );
     }
   }
 
@@ -238,20 +247,29 @@ export class LangchainService {
    * Add a new message to conversation memory
    * This should be called when a new message is created in the database
    */
-  async addMessageToHistory(conversationId: string, content: string, role: 'user' | 'assistant'): Promise<void> {
+  async addMessageToHistory(
+    conversationId: string,
+    content: string,
+    role: 'user' | 'assistant',
+  ): Promise<void> {
     try {
       // Ensure conversation history exists
       const chatHistory = await this.getMessageHistory(conversationId);
-      
+
       if (role === 'user') {
         await chatHistory.addMessage(new HumanMessage(content));
       } else if (role === 'assistant') {
         await chatHistory.addMessage(new AIMessage(content));
       }
 
-      this.logger.log(`Added ${role} message to conversation ${conversationId} history`);
+      this.logger.log(
+        `Added ${role} message to conversation ${conversationId} history`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to add message to history for conversation ${conversationId}`, error);
+      this.logger.error(
+        `Failed to add message to history for conversation ${conversationId}`,
+        error,
+      );
     }
   }
 
