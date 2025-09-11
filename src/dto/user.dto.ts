@@ -11,6 +11,8 @@ export class UserResponseDto {
   required_attributes: string[];
   createdAt: Date;
   updatedAt: Date;
+  // Index signature pour les attributs extraits dynamiquement
+  [key: string]: any;
 }
 
 export class UpdateUserDto {
