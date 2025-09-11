@@ -67,18 +67,20 @@ export class AppController {
   @Post('reset')
   async resetDatabase() {
     try {
-      // Use query builder to handle foreign key constraints properly
+      // Delete all tables in correct order to respect foreign key constraints
+      await this.resourceRepository.query('DELETE FROM messages');
       await this.resourceRepository.query('DELETE FROM document_chunks');
+      await this.resourceRepository.query('DELETE FROM conversations');
       await this.resourceRepository.query('DELETE FROM resources');
+      await this.resourceRepository.query('DELETE FROM users');
 
       return {
-        success: true,
-        message: 'Database has been completely reset',
-        details: 'All resources and document chunks have been deleted',
+        message: 'Database reset completed successfully',
+        status_code: HttpStatus.OK,
       };
     } catch {
       throw new HttpException(
-        'Failed to reset database',
+        'System error during database reset',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

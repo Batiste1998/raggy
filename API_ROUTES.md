@@ -34,16 +34,19 @@ Raggy est un chatbot RAG (Retrieval-Augmented Generation) modulaire avec une API
 ### POST /reset
 
 **Description**: Réinitialise complètement la base de données
-**⚠️ Attention**: Supprime toutes les ressources et chunks
+**⚠️ Attention**: Supprime TOUTES les données (utilisateurs, conversations, messages, ressources, chunks)
+**Body**: Aucun
 **Réponse**:
 
 ```json
 {
-  "success": true,
-  "message": "Database has been completely reset",
-  "details": "All resources and document chunks have been deleted"
+  "message": "Database reset completed successfully",
+  "status_code": 200
 }
 ```
+
+**Erreurs**:
+- `500`: Erreur système lors du reset
 
 ## 2. Routes des Ressources (ResourcesController)
 
