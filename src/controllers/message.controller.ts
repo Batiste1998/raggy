@@ -5,14 +5,13 @@ import {
   Post,
   Param,
   Body,
-  HttpException,
-  HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { MessageService } from '../services';
 import { ConversationService } from '../services';
 import { LangchainService } from '../services';
 import { MessageResponseDto, SendSimpleMessageDto } from '../dto';
+import { MESSAGE_ROLES } from '../config/constants';
 
 @Controller('messages')
 export class MessageController {
@@ -32,27 +31,13 @@ export class MessageController {
     success: boolean;
     message: MessageResponseDto;
   }> {
-    try {
-      this.logger.log(`Getting message: ${messageId}`);
+    this.logger.log(`Getting message: ${messageId}`);
+    const message = await this.messageService.getMessage(messageId);
 
-      const message = await this.messageService.getMessage(messageId);
-
-      return {
-        success: true,
-        message,
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get message ${messageId}`, error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to retrieve message',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      success: true,
+      message,
+    };
   }
 
   /**
@@ -63,70 +48,57 @@ export class MessageController {
     id: string;
     answer: string;
   }> {
-    try {
-      this.logger.log(`Sending message in conversation: ${dto.conversation}`);
+    this.logger.log(`Sending message in conversation: ${dto.conversation}`);
 
-      // Verify conversation exists (throws 404 if not found)
-      const { conversation } = await this.conversationService.getConversation(
-        dto.conversation,
-      );
+    // Verify conversation exists (throws 404 if not found)
+    const { conversation } = await this.conversationService.getConversation(
+      dto.conversation,
+    );
 
-      // Create user message
-      const userMessage = await this.messageService.createMessage(
-        dto.conversation,
-        {
-          content: dto.content,
-          role: 'user',
-        },
-      );
+    // Create user message
+    const userMessage = await this.messageService.createMessage(
+      dto.conversation,
+      {
+        content: dto.content,
+        role: MESSAGE_ROLES.USER,
+      },
+    );
 
-      // Add user message to conversation history
-      await this.langchainService.addMessageToHistory(
-        dto.conversation,
-        dto.content,
-        'user',
-      );
+    // Add user message to conversation history
+    await this.langchainService.addMessageToHistory(
+      dto.conversation,
+      dto.content,
+      MESSAGE_ROLES.USER,
+    );
 
-      // Generate RAG response with conversation context
-      const ragResponse = await this.langchainService.generateRAGResponse(
-        dto.content,
-        dto.conversation,
-        conversation.user_id,
-      );
+    // Generate RAG response with conversation context
+    const ragResponse = await this.langchainService.generateRAGResponse(
+      dto.content,
+      dto.conversation,
+      conversation.user_id,
+    );
 
-      // Create assistant message
-      await this.messageService.createMessage(dto.conversation, {
-        content: ragResponse,
-        role: 'assistant',
-      });
+    // Create assistant message
+    await this.messageService.createMessage(dto.conversation, {
+      content: ragResponse,
+      role: MESSAGE_ROLES.ASSISTANT,
+    });
 
-      // Add assistant message to conversation history
-      await this.langchainService.addMessageToHistory(
-        dto.conversation,
-        ragResponse,
-        'assistant',
-      );
+    // Add assistant message to conversation history
+    await this.langchainService.addMessageToHistory(
+      dto.conversation,
+      ragResponse,
+      MESSAGE_ROLES.ASSISTANT,
+    );
 
-      this.logger.log(
-        `Message sent and RAG response generated for conversation: ${dto.conversation}`,
-      );
+    this.logger.log(
+      `Message sent and RAG response generated for conversation: ${dto.conversation}`,
+    );
 
-      return {
-        id: userMessage.id,
-        answer: ragResponse,
-      };
-    } catch (error) {
-      this.logger.error('Failed to send message', error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to send message',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      id: userMessage.id,
+      answer: ragResponse,
+    };
   }
 
   /**
@@ -137,26 +109,12 @@ export class MessageController {
     success: boolean;
     message: string;
   }> {
-    try {
-      this.logger.log(`Deleting message: ${messageId}`);
+    this.logger.log(`Deleting message: ${messageId}`);
+    await this.messageService.deleteMessage(messageId);
 
-      await this.messageService.deleteMessage(messageId);
-
-      return {
-        success: true,
-        message: 'Message deleted successfully',
-      };
-    } catch (error) {
-      this.logger.error(`Failed to delete message ${messageId}`, error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to delete message',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      success: true,
+      message: 'Message deleted successfully',
+    };
   }
 }

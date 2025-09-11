@@ -79,4 +79,3 @@ export const ERROR_MESSAGES = {
   INVALID_MIME_TYPE_MATCH: (provided: string, detected: string) =>
     `Provided mimeType (${provided}) doesn't match detected type (${detected})`,
 } as const;
-

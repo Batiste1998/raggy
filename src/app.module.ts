@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { memoryStorage } from 'multer';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -20,6 +20,7 @@ import {
   UserController,
 } from './controllers';
 import { ResponseInterceptor } from './interceptors';
+import { GlobalExceptionFilter } from './filters';
 
 @Module({
   imports: [
@@ -50,6 +51,10 @@ import { ResponseInterceptor } from './interceptors';
     {
       provide: APP_INTERCEPTOR,
       useClass: ResponseInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
     },
   ],
   exports: [LangchainService],

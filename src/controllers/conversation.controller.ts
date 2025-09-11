@@ -5,8 +5,6 @@ import {
   Delete,
   Param,
   Body,
-  HttpException,
-  HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { ConversationService } from '../services';
@@ -37,42 +35,29 @@ export class ConversationController {
     message: string;
     welcome_message?: string;
   }> {
-    try {
-      this.logger.log(`Creating conversation for user: ${dto.user}`);
+    this.logger.log(`Creating conversation for user: ${dto.user}`);
 
-      // Create conversation using new service method (throws 404 if user not found)
-      const { conversation, welcome_message } =
-        await this.conversationService.createSimpleConversation(dto);
+    // Create conversation using new service method (throws 404 if user not found)
+    const { conversation, welcome_message } =
+      await this.conversationService.createSimpleConversation(dto);
 
-      this.logger.log(`Conversation created: ${conversation.id}`);
+    this.logger.log(`Conversation created: ${conversation.id}`);
 
-      const response: {
-        id: string;
-        message: string;
-        welcome_message?: string;
-      } = {
-        id: conversation.id,
-        message: 'Conversation created successfully',
-      };
+    const response: {
+      id: string;
+      message: string;
+      welcome_message?: string;
+    } = {
+      id: conversation.id,
+      message: 'Conversation created successfully',
+    };
 
-      // Add welcome message only if it exists
-      if (welcome_message) {
-        response.welcome_message = welcome_message.content;
-      }
-
-      return response;
-    } catch (error) {
-      this.logger.error('Failed to create conversation', error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to create conversation',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    // Add welcome message only if it exists
+    if (welcome_message) {
+      response.welcome_message = welcome_message.content;
     }
+
+    return response;
   }
 
   /**
@@ -84,29 +69,16 @@ export class ConversationController {
     conversations: ConversationResponseDto[];
     count: number;
   }> {
-    try {
-      this.logger.log(`Getting conversations for user: ${dto.user_id}`);
+    this.logger.log(`Getting conversations for user: ${dto.user_id}`);
+    const conversations = await this.conversationService.getUserConversations(
+      dto.user_id,
+    );
 
-      const conversations = await this.conversationService.getUserConversations(
-        dto.user_id,
-      );
-
-      return {
-        success: true,
-        conversations,
-        count: conversations.length,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to get conversations for user ${dto.user_id}`,
-        error,
-      );
-
-      throw new HttpException(
-        'Failed to retrieve conversations',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      success: true,
+      conversations,
+      count: conversations.length,
+    };
   }
 
   /**
@@ -118,29 +90,15 @@ export class ConversationController {
     conversation: ConversationResponseDto;
     messages: MessageResponseDto[];
   }> {
-    try {
-      this.logger.log(`Getting conversation: ${conversationId}`);
+    this.logger.log(`Getting conversation: ${conversationId}`);
+    const { conversation, messages } =
+      await this.conversationService.getConversation(conversationId);
 
-      const { conversation, messages } =
-        await this.conversationService.getConversation(conversationId);
-
-      return {
-        success: true,
-        conversation,
-        messages,
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get conversation ${conversationId}`, error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to retrieve conversation',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      success: true,
+      conversation,
+      messages,
+    };
   }
 
   /**
@@ -151,30 +109,13 @@ export class ConversationController {
     success: boolean;
     message: string;
   }> {
-    try {
-      this.logger.log(`Deleting conversation: ${conversationId}`);
+    this.logger.log(`Deleting conversation: ${conversationId}`);
+    await this.conversationService.deleteConversation(conversationId);
 
-      await this.conversationService.deleteConversation(conversationId);
-
-      return {
-        success: true,
-        message: 'Conversation deleted successfully',
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to delete conversation ${conversationId}`,
-        error,
-      );
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to delete conversation',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      success: true,
+      message: 'Conversation deleted successfully',
+    };
   }
 
   /**
@@ -186,31 +127,14 @@ export class ConversationController {
     messages: MessageResponseDto[];
     count: number;
   }> {
-    try {
-      this.logger.log(`Getting messages for conversation: ${conversationId}`);
+    this.logger.log(`Getting messages for conversation: ${conversationId}`);
+    const messages =
+      await this.messageService.getConversationMessages(conversationId);
 
-      const messages =
-        await this.messageService.getConversationMessages(conversationId);
-
-      return {
-        success: true,
-        messages,
-        count: messages.length,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to get messages for conversation ${conversationId}`,
-        error,
-      );
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to retrieve messages',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      success: true,
+      messages,
+      count: messages.length,
+    };
   }
 }

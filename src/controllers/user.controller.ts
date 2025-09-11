@@ -6,8 +6,6 @@ import {
   Delete,
   Param,
   Body,
-  HttpException,
-  HttpStatus,
   Logger,
   UsePipes,
   ValidationPipe,
@@ -39,28 +37,14 @@ export class UserController {
     message: string;
     user: UserResponseDto;
   }> {
-    try {
-      this.logger.log('Creating new user');
+    this.logger.log('Creating new user');
+    const user = await this.userService.createUser(dto);
 
-      const user = await this.userService.createUser(dto);
-
-      return {
-        id: user.id,
-        message: 'User created successfully',
-        user,
-      };
-    } catch (error) {
-      this.logger.error('Failed to create user', error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to create user',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      id: user.id,
+      message: 'User created successfully',
+      user,
+    };
   }
 
   /**
@@ -74,29 +58,14 @@ export class UserController {
     message: string;
     user: UserResponseDto;
   }> {
-    try {
-      const { id } = params;
-      this.logger.log(`Getting user: ${id}`);
+    const { id } = params;
+    this.logger.log(`Getting user: ${id}`);
+    const user = await this.userService.findUserById(id);
 
-      const user = await this.userService.findUserById(id);
-
-      return {
-        message: 'User retrieved successfully',
-        user,
-      };
-    } catch (error) {
-      const { id } = params;
-      this.logger.error(`Failed to get user ${id}`, error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to retrieve user',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      message: 'User retrieved successfully',
+      user,
+    };
   }
 
   /**
@@ -114,29 +83,14 @@ export class UserController {
     message: string;
     user: UserResponseDto;
   }> {
-    try {
-      const { id } = params;
-      this.logger.log(`Updating user: ${id}`);
+    const { id } = params;
+    this.logger.log(`Updating user: ${id}`);
+    const user = await this.userService.updateUser(id, dto);
 
-      const user = await this.userService.updateUser(id, dto);
-
-      return {
-        message: 'User updated successfully',
-        user,
-      };
-    } catch (error) {
-      const { id } = params;
-      this.logger.error(`Failed to update user ${id}`, error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to update user',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      message: 'User updated successfully',
+      user,
+    };
   }
 
   /**
@@ -150,29 +104,14 @@ export class UserController {
     id: string;
     message: string;
   }> {
-    try {
-      const { id } = params;
-      this.logger.log(`Deleting user: ${id}`);
+    const { id } = params;
+    this.logger.log(`Deleting user: ${id}`);
+    await this.userService.deleteUser(id);
 
-      await this.userService.deleteUser(id);
-
-      return {
-        id,
-        message: 'User deleted successfully',
-      };
-    } catch (error) {
-      const { id } = params;
-      this.logger.error(`Failed to delete user ${id}`, error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to delete user',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      id,
+      message: 'User deleted successfully',
+    };
   }
 
   /**
@@ -186,23 +125,13 @@ export class UserController {
     users: UserResponseDto[];
     count: number;
   }> {
-    try {
-      this.logger.log('Getting all users');
+    this.logger.log('Getting all users');
+    const users = await this.userService.getAllUsers();
 
-      const users = await this.userService.getAllUsers();
-
-      return {
-        message: 'Users retrieved successfully',
-        users,
-        count: users.length,
-      };
-    } catch (error) {
-      this.logger.error('Failed to get all users', error);
-
-      throw new HttpException(
-        'Failed to retrieve users',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      message: 'Users retrieved successfully',
+      users,
+      count: users.length,
+    };
   }
 }

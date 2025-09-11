@@ -120,7 +120,6 @@ export class MessageService {
     }
   }
 
-
   /**
    * Get all messages for a conversation
    */
