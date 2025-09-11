@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, Message, Conversation } from '../database/entities';
 import { LangchainService } from './langchain.service';
+import { MESSAGE_ROLES } from '../config/constants';
 
 @Injectable()
 export class AttributeExtractionService {
@@ -66,7 +67,7 @@ export class AttributeExtractionService {
           .where('message.conversation_id IN (:...conversationIds)', {
             conversationIds,
           })
-          .andWhere('message.role = :role', { role: 'user' })
+          .andWhere('message.role = :role', { role: MESSAGE_ROLES.USER })
           .orderBy('message.createdAt', 'ASC')
           .getMany();
       } else {
@@ -74,21 +75,23 @@ export class AttributeExtractionService {
         this.logger.log(
           `Incremental extraction for user: ${userId} since ${user.last_extraction_date?.toISOString() || 'never'}`,
         );
-        
+
         const query = this.messageRepository
           .createQueryBuilder('message')
           .where('message.conversation_id IN (:...conversationIds)', {
             conversationIds,
           })
-          .andWhere('message.role = :role', { role: 'user' })
+          .andWhere('message.role = :role', { role: MESSAGE_ROLES.USER })
           .andWhere('message.createdAt > :lastExtraction', {
             lastExtraction: user.last_extraction_date,
           })
           .orderBy('message.createdAt', 'ASC');
-          
+
         userMessages = await query.getMany();
-        
-        this.logger.log(`Found ${userMessages.length} messages since last extraction`);
+
+        this.logger.log(
+          `Found ${userMessages.length} messages since last extraction`,
+        );
 
         // Process any new messages (no threshold)
       }
@@ -277,22 +280,28 @@ RÉPONSE JSON :`;
     messageId: string,
   ): Promise<Record<string, any>> {
     try {
-      this.logger.log(`Processing attribute extraction for user: ${userId}, message: ${messageId}`);
+      this.logger.log(
+        `Processing attribute extraction for user: ${userId}, message: ${messageId}`,
+      );
 
       // Get user with required_attributes
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user || user.required_attributes.length === 0) {
-        this.logger.log(`No user found or no required_attributes for user: ${userId}`);
+        this.logger.log(
+          `No user found or no required_attributes for user: ${userId}`,
+        );
         return {};
       }
 
       // Get the specific message
-      const message = await this.messageRepository.findOne({ 
-        where: { id: messageId, role: 'user' } 
+      const message = await this.messageRepository.findOne({
+        where: { id: messageId, role: MESSAGE_ROLES.USER },
       });
-      
+
       if (!message) {
-        this.logger.log(`Message not found or not a user message: ${messageId}`);
+        this.logger.log(
+          `Message not found or not a user message: ${messageId}`,
+        );
         return user.extracted_attributes || {};
       }
 
@@ -335,7 +344,7 @@ RÉPONSE JSON :`;
   ): Promise<Record<string, any>> {
     try {
       this.logger.log(`Processing attribute extraction for user: ${userId}`);
-      
+
       // Capture timestamp BEFORE extraction starts
       const extractionStartTime = new Date();
 
@@ -346,7 +355,7 @@ RÉPONSE JSON :`;
       // Update user if we found new attributes
       if (Object.keys(extractedAttributes).length > 0) {
         await this.updateUserExtractedAttributes(userId, extractedAttributes);
-        
+
         // Update last_extraction_date to the time when extraction started
         // This ensures no messages are missed between extraction start and completion
         await this.userRepository.update(userId, {

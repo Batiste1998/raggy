@@ -6,19 +6,15 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Resource } from './database';
-
-// Default maximum file size: 10MB in bytes
-const DEFAULT_MAX_FILE_SIZE_B = 10485760;
+import { FILE_CONFIG } from './config/constants';
 
 @Controller()
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    private readonly configService: ConfigService,
     @InjectRepository(Resource)
     private readonly resourceRepository: Repository<Resource>,
   ) {}
@@ -32,13 +28,7 @@ export class AppController {
   getConfiguration() {
     try {
       // Check if critical configuration is available
-      const maxFileSizeBytes = parseInt(
-        this.configService.get(
-          'MAX_FILE_SIZE_B',
-          DEFAULT_MAX_FILE_SIZE_B.toString(),
-        ),
-        10,
-      );
+      const maxFileSizeBytes = FILE_CONFIG.getMaxSizeBytes();
 
       // Verify that we have a valid configuration
       if (!maxFileSizeBytes || maxFileSizeBytes <= 0) {

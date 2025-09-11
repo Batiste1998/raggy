@@ -12,6 +12,7 @@ import {
 } from '../dto';
 import { LangchainService } from './langchain.service';
 import { MessageService } from './message.service';
+import { MESSAGE_ROLES } from '../config/constants';
 
 @Injectable()
 export class ConversationService {
@@ -89,7 +90,7 @@ export class ConversationService {
             conversation.id,
             {
               content: welcomeContent,
-              role: 'assistant',
+              role: MESSAGE_ROLES.ASSISTANT,
             },
           );
 
@@ -301,7 +302,7 @@ export class ConversationService {
             conversation.id,
             {
               content: welcomeContent,
-              role: 'assistant',
+              role: MESSAGE_ROLES.ASSISTANT,
             },
           );
 

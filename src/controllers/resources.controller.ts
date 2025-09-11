@@ -16,16 +16,17 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 
 // Services
 import { LangchainService } from '../services';
 import { Resource } from '../database';
 import { ChatDto, ResourceParamDto } from '../dto';
-
-// Default maximum file size: 10MB in bytes
-const DEFAULT_MAX_FILE_SIZE_B = 10485760;
+import {
+  FILE_CONFIG,
+  isValidMimeType,
+  ERROR_MESSAGES,
+} from '../config/constants';
 
 @Controller('resources')
 export class ResourcesController {
@@ -33,7 +34,6 @@ export class ResourcesController {
 
   constructor(
     private readonly langchainService: LangchainService,
-    private readonly configService: ConfigService,
     @InjectRepository(Resource)
     private readonly resourceRepository: Repository<Resource>,
   ) {}
@@ -59,39 +59,29 @@ export class ResourcesController {
       // Validate provided mimeType if present
       if (body?.mimeType && body.mimeType !== file.mimetype) {
         throw new HttpException(
-          `Provided mimeType (${body.mimeType}) doesn't match detected type (${file.mimetype})`,
+          ERROR_MESSAGES.INVALID_MIME_TYPE_MATCH(body.mimeType, file.mimetype),
           HttpStatus.BAD_REQUEST,
         );
       }
 
       // Check file size
-      const maxFileSizeBytes = parseInt(
-        this.configService.get(
-          'MAX_FILE_SIZE_B',
-          DEFAULT_MAX_FILE_SIZE_B.toString(),
-        ),
-        10,
-      );
-      const maxFileSizeMB = Math.round(maxFileSizeBytes / (1024 * 1024));
+      const maxFileSizeBytes = FILE_CONFIG.getMaxSizeBytes();
+      const maxFileSizeMB = FILE_CONFIG.getMaxSizeMB();
 
       if (file.size > maxFileSizeBytes) {
         throw new HttpException(
-          `File size exceeds maximum limit of ${maxFileSizeMB}MB`,
+          ERROR_MESSAGES.FILE_TOO_LARGE(maxFileSizeMB),
           HttpStatus.PAYLOAD_TOO_LARGE,
         );
       }
 
       // Validate MIME type
-      const allowedMimeTypes = [
-        'text/csv',
-        'application/pdf',
-        'text/plain',
-        'application/json',
-      ];
-
-      if (!allowedMimeTypes.includes(file.mimetype)) {
+      if (!isValidMimeType(file.mimetype)) {
         throw new HttpException(
-          `Unsupported file type: ${file.mimetype}. Allowed types: ${allowedMimeTypes.join(', ')}`,
+          ERROR_MESSAGES.UNSUPPORTED_FILE_TYPE(
+            file.mimetype,
+            FILE_CONFIG.ALLOWED_MIME_TYPES,
+          ),
           HttpStatus.BAD_REQUEST,
         );
       }

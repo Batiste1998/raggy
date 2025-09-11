@@ -33,6 +33,9 @@ import { writeFile, unlink } from 'fs/promises';
 // Entities
 import { DocumentChunk, Message } from '../database/entities';
 
+// Constants
+import { MESSAGE_ROLES, DOCUMENT_CONFIG } from '../config/constants';
+
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 
 // Interface for raw SQL query results
@@ -109,14 +112,8 @@ export class LangchainService {
 
       // Initialize text splitter
       this.textSplitter = new RecursiveCharacterTextSplitter({
-        chunkSize: parseInt(
-          this.configService.get('DOCUMENT_CHUNK_SIZE', '1000'),
-          10,
-        ),
-        chunkOverlap: parseInt(
-          this.configService.get('DOCUMENT_CHUNK_OVERLAP', '200'),
-          10,
-        ),
+        chunkSize: DOCUMENT_CONFIG.getChunkSize(),
+        chunkOverlap: DOCUMENT_CONFIG.getChunkOverlap(),
       });
 
       // Initialize custom retriever
@@ -225,9 +222,9 @@ export class LangchainService {
       const chatHistory = this.messageHistories[conversationId];
 
       for (const message of messages) {
-        if (message.role === 'user') {
+        if (message.role === MESSAGE_ROLES.USER) {
           await chatHistory.addMessage(new HumanMessage(message.content));
-        } else if (message.role === 'assistant') {
+        } else if (message.role === MESSAGE_ROLES.ASSISTANT) {
           await chatHistory.addMessage(new AIMessage(message.content));
         }
       }
@@ -250,15 +247,15 @@ export class LangchainService {
   async addMessageToHistory(
     conversationId: string,
     content: string,
-    role: 'user' | 'assistant',
+    role: (typeof MESSAGE_ROLES)[keyof typeof MESSAGE_ROLES],
   ): Promise<void> {
     try {
       // Ensure conversation history exists
       const chatHistory = await this.getMessageHistory(conversationId);
 
-      if (role === 'user') {
+      if (role === MESSAGE_ROLES.USER) {
         await chatHistory.addMessage(new HumanMessage(content));
-      } else if (role === 'assistant') {
+      } else if (role === MESSAGE_ROLES.ASSISTANT) {
         await chatHistory.addMessage(new AIMessage(content));
       }
 

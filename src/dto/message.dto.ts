@@ -1,18 +1,20 @@
 import { IsString, IsEnum, IsNotEmpty } from 'class-validator';
+import { MESSAGE_ROLES } from '../config/constants';
+import type { MessageRole } from '../config/constants';
 
 export class CreateMessageDto {
   @IsString()
   content: string;
 
-  @IsEnum(['user', 'assistant'])
-  role: 'user' | 'assistant';
+  @IsEnum(MESSAGE_ROLES)
+  role: MessageRole;
 }
 
 export class MessageResponseDto {
   id: string;
   conversation_id: string;
   content: string;
-  role: 'user' | 'assistant';
+  role: MessageRole;
   createdAt: Date;
 }
 

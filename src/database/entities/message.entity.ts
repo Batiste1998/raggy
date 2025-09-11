@@ -7,13 +7,17 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Conversation } from './conversation.entity';
+import { MESSAGE_ROLES } from '../../config/constants';
+import type { MessageRole } from '../../config/constants';
 
 @Entity('messages')
 export class Message {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Conversation, (conversation) => conversation.messages, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Conversation, (conversation) => conversation.messages, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'conversation_id' })
   conversation: Conversation;
 
@@ -25,9 +29,9 @@ export class Message {
 
   @Column({
     type: 'enum',
-    enum: ['user', 'assistant'],
+    enum: MESSAGE_ROLES,
   })
-  role: 'user' | 'assistant';
+  role: MessageRole;
 
   @CreateDateColumn()
   createdAt: Date;
