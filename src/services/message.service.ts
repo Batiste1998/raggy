@@ -1,8 +1,15 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Message, Conversation } from '../database/entities';
 import { CreateMessageDto, MessageResponseDto } from '../dto';
+import { AttributeExtractionService } from './attribute-extraction.service';
 
 @Injectable()
 export class MessageService {
@@ -13,6 +20,8 @@ export class MessageService {
     private readonly messageRepository: Repository<Message>,
     @InjectRepository(Conversation)
     private readonly conversationRepository: Repository<Conversation>,
+    @Inject(forwardRef(() => AttributeExtractionService))
+    private readonly attributeExtractionService: AttributeExtractionService,
   ) {}
 
   /**
@@ -51,6 +60,19 @@ export class MessageService {
 
       this.logger.log(`Message created: ${message.id}`);
 
+      // Trigger attribute extraction for user messages (async, no await)
+      if (dto.role === 'user') {
+        // Add small delay to ensure transaction is committed
+        setTimeout(() => {
+          this.triggerAttributeExtractionForMessage(conversation.user_id, message.id).catch((error) => {
+            this.logger.error(
+              `Failed to trigger attribute extraction for user ${conversation.user_id}`,
+              error,
+            );
+          });
+        }, 100); // 100ms delay
+      }
+
       return {
         id: message.id,
         conversation_id: message.conversation_id,
@@ -64,6 +86,40 @@ export class MessageService {
         error,
       );
       throw error;
+    }
+  }
+
+  /**
+   * Trigger attribute extraction for a specific message (async background process)
+   */
+  private async triggerAttributeExtractionForMessage(userId: string, messageId: string): Promise<void> {
+    try {
+      this.logger.log(`Triggering attribute extraction for user: ${userId}, message: ${messageId}`);
+      await this.attributeExtractionService.processAttributeExtractionForMessage(userId, messageId);
+      this.logger.log(`Attribute extraction completed for user: ${userId}, message: ${messageId}`);
+    } catch (error) {
+      this.logger.error(
+        `Attribute extraction failed for user ${userId}, message ${messageId}`,
+        error,
+      );
+      // Don't re-throw - this is a background process
+    }
+  }
+
+  /**
+   * Trigger attribute extraction for a user (async background process)
+   */
+  private async triggerAttributeExtraction(userId: string): Promise<void> {
+    try {
+      this.logger.log(`Triggering attribute extraction for user: ${userId}`);
+      await this.attributeExtractionService.processAttributeExtraction(userId);
+      this.logger.log(`Attribute extraction completed for user: ${userId}`);
+    } catch (error) {
+      this.logger.error(
+        `Attribute extraction failed for user ${userId}`,
+        error,
+      );
+      // Don't re-throw - this is a background process
     }
   }
 

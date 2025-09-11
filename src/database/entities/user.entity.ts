@@ -16,6 +16,12 @@ export class User {
   @Column('simple-array', { default: '' })
   required_attributes: string[];
 
+  @Column('jsonb', { default: {} })
+  extracted_attributes: Record<string, any>;
+
+  @Column({ type: 'timestamp', nullable: true })
+  last_extraction_date: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

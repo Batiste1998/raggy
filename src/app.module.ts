@@ -11,6 +11,7 @@ import {
   ConversationService,
   MessageService,
   UserService,
+  AttributeExtractionService,
 } from './services';
 import {
   ResourcesController,
@@ -45,6 +46,7 @@ import { ResponseInterceptor } from './interceptors';
     ConversationService,
     MessageService,
     UserService,
+    AttributeExtractionService,
     {
       provide: APP_INTERCEPTOR,
       useClass: ResponseInterceptor,

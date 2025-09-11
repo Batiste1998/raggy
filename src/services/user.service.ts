@@ -1,8 +1,15 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../database/entities/user.entity';
 import { CreateUserDto, UserResponseDto, UpdateUserDto } from '../dto/user.dto';
+import { AttributeExtractionService } from './attribute-extraction.service';
 
 @Injectable()
 export class UserService {
@@ -11,6 +18,8 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @Inject(forwardRef(() => AttributeExtractionService))
+    private readonly attributeExtractionService: AttributeExtractionService,
   ) {}
 
   /**
@@ -42,25 +51,23 @@ export class UserService {
   }
 
   /**
-   * Find user by ID
+   * Find user by ID with extracted attributes
    */
   async findUserById(id: string): Promise<UserResponseDto> {
     try {
-      this.logger.log(`Finding user: ${id}`);
+      this.logger.log(`Finding user with extracted attributes: ${id}`);
 
-      const user = await this.userRepository.findOne({ where: { id } });
+      const userWithAttributes =
+        await this.attributeExtractionService.getUserWithExtractedAttributes(
+          id,
+        );
 
-      if (!user) {
+      if (!userWithAttributes) {
         this.logger.warn(`User not found: ${id}`);
         throw new NotFoundException('User not found');
       }
 
-      return {
-        id: user.id,
-        required_attributes: user.required_attributes,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      };
+      return userWithAttributes;
     } catch (error) {
       this.logger.error(`Failed to find user ${id}`, error);
       throw error;
