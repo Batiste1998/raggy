@@ -318,6 +318,43 @@ curl "http://localhost:3000/conversations?user_id=user-123"
 
 ## 4. Routes des Messages (MessageController)
 
+### POST /messages
+
+**Description**: Envoie un message et reçoit la réponse RAG
+**Body**:
+
+```json
+{
+  "conversation": "conversation-id",
+  "content": "message du patient"
+}
+```
+
+**Exemple**:
+
+```bash
+curl -X POST http://localhost:3000/messages \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversation": "conv-123",
+    "content": "Quelles sont mes options nutritionnelles ?"
+  }'
+```
+
+**Réponse**:
+
+```json
+{
+  "id": "msg-uuid",
+  "answer": "Réponse générée par le RAG basée sur vos documents...",
+  "statusCode": 200
+}
+```
+
+**Erreurs**:
+- `404`: ID de la conversation inconnu
+- `500`: Erreur système
+
 ### GET /messages/:id
 
 **Description**: Détails d'un message spécifique

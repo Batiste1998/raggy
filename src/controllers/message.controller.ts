@@ -2,19 +2,27 @@ import {
   Controller,
   Get,
   Delete,
+  Post,
   Param,
+  Body,
   HttpException,
   HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { MessageService } from '../services';
-import { MessageResponseDto } from '../dto';
+import { ConversationService } from '../services';
+import { LangchainService } from '../services';
+import { MessageResponseDto, SendSimpleMessageDto } from '../dto';
 
 @Controller('messages')
 export class MessageController {
   private readonly logger = new Logger(MessageController.name);
 
-  constructor(private readonly messageService: MessageService) {}
+  constructor(
+    private readonly messageService: MessageService,
+    private readonly conversationService: ConversationService,
+    private readonly langchainService: LangchainService,
+  ) {}
 
   /**
    * GET /messages/:id - Get a specific message
@@ -42,6 +50,66 @@ export class MessageController {
 
       throw new HttpException(
         'Failed to retrieve message',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * POST /messages - Send a message and get RAG response
+   */
+  @Post()
+  async sendMessage(@Body() dto: SendSimpleMessageDto): Promise<{
+    id: string;
+    answer: string;
+  }> {
+    try {
+      this.logger.log(`Sending message in conversation: ${dto.conversation}`);
+
+      // Verify conversation exists (throws 404 if not found)
+      const { conversation } = await this.conversationService.getConversation(
+        dto.conversation,
+      );
+
+      // Create user message
+      const userMessage = await this.messageService.createMessage(
+        dto.conversation,
+        {
+          content: dto.content,
+          role: 'user',
+        },
+      );
+
+      // Generate RAG response with conversation context
+      const ragResponse = await this.langchainService.generateRAGResponse(
+        dto.content,
+        dto.conversation,
+        conversation.user_id,
+      );
+
+      // Create assistant message
+      await this.messageService.createMessage(dto.conversation, {
+        content: ragResponse,
+        role: 'assistant',
+      });
+
+      this.logger.log(
+        `Message sent and RAG response generated for conversation: ${dto.conversation}`,
+      );
+
+      return {
+        id: userMessage.id,
+        answer: ragResponse,
+      };
+    } catch (error) {
+      this.logger.error('Failed to send message', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to send message',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

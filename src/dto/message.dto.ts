@@ -1,4 +1,4 @@
-import { IsString, IsEnum } from 'class-validator';
+import { IsString, IsEnum, IsNotEmpty } from 'class-validator';
 
 export class CreateMessageDto {
   @IsString()
@@ -18,5 +18,15 @@ export class MessageResponseDto {
 
 export class SendMessageDto {
   @IsString()
+  content: string;
+}
+
+export class SendSimpleMessageDto {
+  @IsString({ message: 'Conversation ID must be provided' })
+  @IsNotEmpty({ message: 'Conversation ID cannot be empty' })
+  conversation: string;
+
+  @IsString({ message: 'Message content must be provided' })
+  @IsNotEmpty({ message: 'Message content cannot be empty' })
   content: string;
 }

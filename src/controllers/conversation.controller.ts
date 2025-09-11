@@ -13,7 +13,6 @@ import { ConversationService } from '../services';
 import { MessageService } from '../services';
 import { LangchainService } from '../services';
 import {
-  CreateConversationDto,
   CreateSimpleConversationDto,
   ConversationResponseDto,
   GetConversationsDto,
