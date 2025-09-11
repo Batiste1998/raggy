@@ -110,11 +110,11 @@ curl -X DELETE http://localhost:3000/resources/123e4567-e89b-12d3-a456-426614174
 ### GET /resources
 
 **Description**: Liste toutes les ressources
+**Body**: Aucun
 **Réponse**:
 
 ```json
 {
-  "success": true,
   "resources": [
     {
       "id": "uuid-resource-id",
@@ -123,9 +123,14 @@ curl -X DELETE http://localhost:3000/resources/123e4567-e89b-12d3-a456-426614174
       "uploadedAt": "2024-01-15T10:30:00.000Z"
     }
   ],
-  "count": 1
+  "count": 1,
+  "message": "Resources retrieved successfully",
+  "statusCode": 200
 }
 ```
+
+**Erreurs**:
+- `500`: Erreur système
 
 ### POST /resources/chat (DÉPRÉCIÉ)
 

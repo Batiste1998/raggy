@@ -206,9 +206,9 @@ export class ResourcesController {
       }));
 
       return {
-        success: true,
         resources: sanitizedResources,
         count: sanitizedResources.length,
+        message: 'Resources retrieved successfully',
       };
     } catch (error) {
       this.logger.error('Failed to retrieve resources', error);
