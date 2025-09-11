@@ -11,6 +11,7 @@ import { ChatOllama } from '@langchain/ollama';
 import { Document } from '@langchain/core/documents';
 import { RunnableWithMessageHistory } from '@langchain/core/runnables';
 import { InMemoryChatMessageHistory } from '@langchain/core/chat_history';
+import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import {
   ChatPromptTemplate,
   MessagesPlaceholder,
@@ -30,7 +31,7 @@ import { join } from 'path';
 import { writeFile, unlink } from 'fs/promises';
 
 // Entities
-import { DocumentChunk } from '../database';
+import { DocumentChunk, Message } from '../database/entities';
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 
@@ -86,6 +87,8 @@ export class LangchainService {
     private configService: ConfigService,
     @InjectRepository(DocumentChunk)
     private documentChunkRepository: Repository<DocumentChunk>,
+    @InjectRepository(Message)
+    private messageRepository: Repository<Message>,
   ) {
     void this.initializeServices();
   }
@@ -157,8 +160,8 @@ export class LangchainService {
       // Create conversational chain
       this.conversationalChain = new RunnableWithMessageHistory({
         runnable: this.retrievalChain,
-        getMessageHistory: (sessionId: string) =>
-          this.getMessageHistory(sessionId),
+        getMessageHistory: async (sessionId: string) =>
+          await this.getMessageHistory(sessionId),
         inputMessagesKey: 'input',
         historyMessagesKey: 'chat_history',
       });
@@ -195,11 +198,61 @@ export class LangchainService {
     // For now, we'll initialize it when needed
   }
 
-  private getMessageHistory(sessionId: string): InMemoryChatMessageHistory {
+  private async getMessageHistory(sessionId: string): Promise<InMemoryChatMessageHistory> {
     if (!this.messageHistories[sessionId]) {
       this.messageHistories[sessionId] = new InMemoryChatMessageHistory();
+      
+      // Load existing messages from database
+      await this.loadMessagesFromDatabase(sessionId);
     }
     return this.messageHistories[sessionId];
+  }
+
+  /**
+   * Load existing messages from database into memory history
+   */
+  private async loadMessagesFromDatabase(conversationId: string): Promise<void> {
+    try {
+      const messages = await this.messageRepository.find({
+        where: { conversation_id: conversationId },
+        order: { createdAt: 'ASC' },
+      });
+
+      const chatHistory = this.messageHistories[conversationId];
+      
+      for (const message of messages) {
+        if (message.role === 'user') {
+          await chatHistory.addMessage(new HumanMessage(message.content));
+        } else if (message.role === 'assistant') {
+          await chatHistory.addMessage(new AIMessage(message.content));
+        }
+      }
+
+      this.logger.log(`Loaded ${messages.length} messages from database for conversation ${conversationId}`);
+    } catch (error) {
+      this.logger.error(`Failed to load messages from database for conversation ${conversationId}`, error);
+    }
+  }
+
+  /**
+   * Add a new message to conversation memory
+   * This should be called when a new message is created in the database
+   */
+  async addMessageToHistory(conversationId: string, content: string, role: 'user' | 'assistant'): Promise<void> {
+    try {
+      // Ensure conversation history exists
+      const chatHistory = await this.getMessageHistory(conversationId);
+      
+      if (role === 'user') {
+        await chatHistory.addMessage(new HumanMessage(content));
+      } else if (role === 'assistant') {
+        await chatHistory.addMessage(new AIMessage(content));
+      }
+
+      this.logger.log(`Added ${role} message to conversation ${conversationId} history`);
+    } catch (error) {
+      this.logger.error(`Failed to add message to history for conversation ${conversationId}`, error);
+    }
   }
 
   /**

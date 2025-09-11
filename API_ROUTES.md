@@ -260,38 +260,7 @@ curl "http://localhost:3000/conversations?user_id=user-123"
 }
 ```
 
-### POST /conversations/:id/messages
-
-**Description**: Envoie un message dans une conversation
-**Paramètres**: `id` (UUID de la conversation)
-**Body**:
-
-```json
-{
-  "content": "Votre message ici"
-}
-```
-
-**Réponse**:
-
-```json
-{
-  "user_message": {
-    "id": "msg-uuid",
-    "conversation_id": "conv-uuid",
-    "content": "Votre message ici",
-    "role": "user",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  },
-  "ai_response": {
-    "id": "msg-uuid-2",
-    "conversation_id": "conv-uuid",
-    "content": "Réponse générée par l'\''IA avec RAG...",
-    "role": "assistant",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  }
-}
-```
+~~### POST /conversations/:id/messages~~ (**Route supprimée - utiliser POST /messages à la place**)
 
 ### GET /conversations/:id/messages
 

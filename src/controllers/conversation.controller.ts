@@ -11,12 +11,10 @@ import {
 } from '@nestjs/common';
 import { ConversationService } from '../services';
 import { MessageService } from '../services';
-import { LangchainService } from '../services';
 import {
   CreateSimpleConversationDto,
   ConversationResponseDto,
   GetConversationsDto,
-  SendMessageDto,
   MessageResponseDto,
 } from '../dto';
 
@@ -27,7 +25,6 @@ export class ConversationController {
   constructor(
     private readonly conversationService: ConversationService,
     private readonly messageService: MessageService,
-    private readonly langchainService: LangchainService,
   ) {}
 
   /**
@@ -180,73 +177,6 @@ export class ConversationController {
     }
   }
 
-  /**
-   * POST /conversations/:id/messages - Send a message in a conversation
-   */
-  @Post(':id/messages')
-  async sendMessage(
-    @Param('id') conversationId: string,
-    @Body() dto: SendMessageDto,
-  ): Promise<{
-    user_message: MessageResponseDto;
-    ai_response: MessageResponseDto;
-  }> {
-    try {
-      this.logger.log(`Sending message in conversation: ${conversationId}`);
-
-      // Create user message
-      const userMessage = await this.messageService.createMessage(
-        conversationId,
-        {
-          content: dto.content,
-          role: 'user',
-        },
-      );
-
-      // Get conversation to retrieve user_id for context
-      const { conversation } =
-        await this.conversationService.getConversation(conversationId);
-
-      // Generate AI response using RAG with conversation context
-      const aiResponseContent = await this.langchainService.generateRAGResponse(
-        dto.content,
-        conversationId,
-        conversation.user_id,
-      );
-
-      // Create AI message
-      const aiMessage = await this.messageService.createMessage(
-        conversationId,
-        {
-          content: aiResponseContent,
-          role: 'assistant',
-        },
-      );
-
-      this.logger.log(
-        `Message sent and AI responded in conversation: ${conversationId}`,
-      );
-
-      return {
-        user_message: userMessage,
-        ai_response: aiMessage,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to send message in conversation ${conversationId}`,
-        error,
-      );
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        'Failed to send message',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
 
   /**
    * GET /conversations/:id/messages - Get all messages for a conversation

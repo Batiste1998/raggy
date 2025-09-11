@@ -80,6 +80,9 @@ export class MessageController {
         },
       );
 
+      // Add user message to conversation history
+      await this.langchainService.addMessageToHistory(dto.conversation, dto.content, 'user');
+
       // Generate RAG response with conversation context
       const ragResponse = await this.langchainService.generateRAGResponse(
         dto.content,
@@ -92,6 +95,9 @@ export class MessageController {
         content: ragResponse,
         role: 'assistant',
       });
+
+      // Add assistant message to conversation history
+      await this.langchainService.addMessageToHistory(dto.conversation, ragResponse, 'assistant');
 
       this.logger.log(
         `Message sent and RAG response generated for conversation: ${dto.conversation}`,
