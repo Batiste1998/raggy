@@ -11,12 +11,8 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { UserService } from '../services/user.service';
-import {
-  CreateUserDto,
-  UserResponseDto,
-  UpdateUserDto,
-  UserParamDto,
-} from '../dto/user.dto';
+import { CreateUserDto, UpdateUserDto, UserParamDto } from '../dto/user.dto';
+import { StandardResponse } from '../dto/response.dto';
 
 @Controller('users')
 export class UserController {
@@ -32,18 +28,25 @@ export class UserController {
    */
   @Post()
   @UsePipes(new ValidationPipe({ transform: true }))
-  async createUser(@Body() dto: CreateUserDto): Promise<{
-    id: string;
-    message: string;
-    user: UserResponseDto;
-  }> {
+  async createUser(@Body() dto: CreateUserDto): Promise<
+    StandardResponse<{
+      id: string;
+      required_attributes: string[];
+      created_at: Date;
+      updated_at: Date;
+    }>
+  > {
     this.logger.log('Creating new user');
     const user = await this.userService.createUser(dto);
 
     return {
-      id: user.id,
       message: 'User created successfully',
-      user,
+      data: {
+        id: user.id,
+        required_attributes: user.required_attributes,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt,
+      },
     };
   }
 
@@ -54,17 +57,26 @@ export class UserController {
    */
   @Get(':id')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async getUser(@Param() params: UserParamDto): Promise<{
-    message: string;
-    user: UserResponseDto;
-  }> {
+  async getUser(@Param() params: UserParamDto): Promise<
+    StandardResponse<{
+      id: string;
+      required_attributes: string[];
+      created_at: Date;
+      updated_at: Date;
+    }>
+  > {
     const { id } = params;
     this.logger.log(`Getting user: ${id}`);
     const user = await this.userService.findUserById(id);
 
     return {
       message: 'User retrieved successfully',
-      user,
+      data: {
+        id: user.id,
+        required_attributes: user.required_attributes,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt,
+      },
     };
   }
 
@@ -79,17 +91,26 @@ export class UserController {
   async updateUser(
     @Param() params: UserParamDto,
     @Body() dto: UpdateUserDto,
-  ): Promise<{
-    message: string;
-    user: UserResponseDto;
-  }> {
+  ): Promise<
+    StandardResponse<{
+      id: string;
+      required_attributes: string[];
+      created_at: Date;
+      updated_at: Date;
+    }>
+  > {
     const { id } = params;
     this.logger.log(`Updating user: ${id}`);
     const user = await this.userService.updateUser(id, dto);
 
     return {
       message: 'User updated successfully',
-      user,
+      data: {
+        id: user.id,
+        required_attributes: user.required_attributes,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt,
+      },
     };
   }
 
@@ -100,17 +121,20 @@ export class UserController {
    */
   @Delete(':id')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async deleteUser(@Param() params: UserParamDto): Promise<{
-    id: string;
-    message: string;
-  }> {
+  async deleteUser(@Param() params: UserParamDto): Promise<
+    StandardResponse<{
+      id: string;
+    }>
+  > {
     const { id } = params;
     this.logger.log(`Deleting user: ${id}`);
     await this.userService.deleteUser(id);
 
     return {
-      id,
       message: 'User deleted successfully',
+      data: {
+        id,
+      },
     };
   }
 
@@ -120,18 +144,31 @@ export class UserController {
    * Errors: 500 (system error)
    */
   @Get()
-  async getAllUsers(): Promise<{
-    message: string;
-    users: UserResponseDto[];
-    count: number;
-  }> {
+  async getAllUsers(): Promise<
+    StandardResponse<{
+      users: Array<{
+        id: string;
+        required_attributes: string[];
+        created_at: Date;
+        updated_at: Date;
+      }>;
+      count: number;
+    }>
+  > {
     this.logger.log('Getting all users');
     const users = await this.userService.getAllUsers();
 
     return {
       message: 'Users retrieved successfully',
-      users,
-      count: users.length,
+      data: {
+        users: users.map((user) => ({
+          id: user.id,
+          required_attributes: user.required_attributes,
+          created_at: user.createdAt,
+          updated_at: user.updatedAt,
+        })),
+        count: users.length,
+      },
     };
   }
 }
