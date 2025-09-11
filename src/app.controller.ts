@@ -28,22 +28,40 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Get('config')
-  getConfig() {
-    const maxFileSizeBytes = parseInt(
-      this.configService.get(
-        'MAX_FILE_SIZE_B',
-        DEFAULT_MAX_FILE_SIZE_B.toString(),
-      ),
-      10,
-    );
-    const maxFileSizeMB = Math.round(maxFileSizeBytes / (1024 * 1024));
+  @Get('configuration')
+  getConfiguration() {
+    try {
+      // Check if critical configuration is available
+      const maxFileSizeBytes = parseInt(
+        this.configService.get(
+          'MAX_FILE_SIZE_B',
+          DEFAULT_MAX_FILE_SIZE_B.toString(),
+        ),
+        10,
+      );
 
-    return {
-      maxFileSizeMB: maxFileSizeMB,
-      maxFileSizeBytes: maxFileSizeBytes,
-      message: `Maximum file size allowed: ${maxFileSizeMB}MB (${maxFileSizeBytes} bytes)`,
-    };
+      // Verify that we have a valid configuration
+      if (!maxFileSizeBytes || maxFileSizeBytes <= 0) {
+        throw new HttpException(
+          'No active configuration found',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      return {
+        message: 'Configuration loaded successfully',
+        max_file_size_bytes: maxFileSizeBytes,
+        status_code: HttpStatus.OK,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        'System error while retrieving configuration',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Post('reset')

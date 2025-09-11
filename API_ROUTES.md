@@ -13,18 +13,23 @@ Raggy est un chatbot RAG (Retrieval-Augmented Generation) modulaire avec une API
 **Description**: Point d'entrée de l'API
 **Réponse**: "Hello World!"
 
-### GET /config
+### GET /configuration
 
 **Description**: Configuration actuelle de l'API
+**Body**: Aucun
 **Réponse**:
 
 ```json
 {
-  "maxFileSizeMB": 10,
-  "maxFileSizeBytes": 10485760,
-  "message": "Maximum file size allowed: 10MB (10485760 bytes)"
+  "message": "Configuration loaded successfully",
+  "max_file_size_bytes": 10485760,
+  "status_code": 200
 }
 ```
+
+**Erreurs**:
+- `404`: Aucune configuration active
+- `500`: Erreur système lors de la récupération
 
 ### POST /reset
 
