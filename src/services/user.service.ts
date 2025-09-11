@@ -8,7 +8,12 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../database/entities/user.entity';
-import { CreateUserDto, UserResponseDto, UpdateUserDto } from '../dto/user.dto';
+import {
+  CreateUserDto,
+  UserResponseDto,
+  UpdateUserDto,
+  UserWithAttributesDto,
+} from '../dto/user.dto';
 import { AttributeExtractionService } from './attribute-extraction.service';
 
 @Injectable()
@@ -53,7 +58,7 @@ export class UserService {
   /**
    * Find user by ID with extracted attributes
    */
-  async findUserById(id: string): Promise<UserResponseDto> {
+  async findUserById(id: string): Promise<UserWithAttributesDto> {
     try {
       this.logger.log(`Finding user with extracted attributes: ${id}`);
 

@@ -4,6 +4,10 @@ import { Repository } from 'typeorm';
 import { User, Message, Conversation } from '../database/entities';
 import { LangchainService } from './langchain.service';
 import { MESSAGE_ROLES } from '../config/constants';
+import {
+  ExtractedAttributesData,
+  UserWithAttributesDto,
+} from '../dto/user.dto';
 
 @Injectable()
 export class AttributeExtractionService {
@@ -26,7 +30,7 @@ export class AttributeExtractionService {
    */
   async extractAttributesFromUserMessages(
     userId: string,
-  ): Promise<Record<string, any>> {
+  ): Promise<ExtractedAttributesData> {
     try {
       this.logger.log(
         `Starting simple attribute extraction for user: ${userId}`,
@@ -141,9 +145,9 @@ export class AttributeExtractionService {
    * Newer attributes take precedence over older ones
    */
   private intelligentMergeAttributes(
-    existingAttributes: Record<string, any>,
-    newAttributes: Record<string, any>,
-  ): Record<string, any> {
+    existingAttributes: ExtractedAttributesData,
+    newAttributes: ExtractedAttributesData,
+  ): ExtractedAttributesData {
     this.logger.log('Merging attributes:', {
       existing: existingAttributes,
       new: newAttributes,
@@ -165,7 +169,7 @@ export class AttributeExtractionService {
   private async extractAttributesWithLangChain(
     text: string,
     requiredAttributes: string[],
-  ): Promise<Record<string, any>> {
+  ): Promise<ExtractedAttributesData> {
     try {
       const prompt = `
 Tu es un assistant spécialisé dans l'extraction d'informations personnelles à partir de conversations.
@@ -203,13 +207,33 @@ RÉPONSE JSON :`;
         // Clean up the response to extract JSON
         const jsonMatch = extractedText.match(/\{[^}]*\}/);
         if (jsonMatch) {
-          const extractedAttributes = JSON.parse(jsonMatch[0]);
+          const parsedData = JSON.parse(jsonMatch[0]) as Record<
+            string,
+            unknown
+          >;
 
           // Validate that extracted attributes are in required_attributes
-          const validAttributes: Record<string, any> = {};
-          for (const [key, value] of Object.entries(extractedAttributes)) {
-            if (requiredAttributes.includes(key) && value) {
-              validAttributes[key] = String(value); // Ensure string values
+          const validAttributes: ExtractedAttributesData = {};
+          for (const [key, value] of Object.entries(parsedData)) {
+            if (
+              requiredAttributes.includes(key) &&
+              value != null &&
+              typeof value === 'string'
+            ) {
+              validAttributes[key] = value;
+            } else if (requiredAttributes.includes(key) && value != null) {
+              // Conversion sécurisée vers string selon le type
+              if (typeof value === 'string') {
+                validAttributes[key] = value;
+              } else if (
+                typeof value === 'number' ||
+                typeof value === 'boolean'
+              ) {
+                validAttributes[key] = String(value);
+              } else if (typeof value === 'object') {
+                validAttributes[key] = JSON.stringify(value);
+              }
+              // Ignorer les autres types (fonction, symbol, etc.)
             }
           }
 
@@ -236,7 +260,7 @@ RÉPONSE JSON :`;
    */
   async updateUserExtractedAttributes(
     userId: string,
-    newAttributes: Record<string, any>,
+    newAttributes: ExtractedAttributesData,
   ): Promise<void> {
     try {
       this.logger.log(`Updating extracted attributes for user: ${userId}`);
@@ -278,7 +302,7 @@ RÉPONSE JSON :`;
   async processAttributeExtractionForMessage(
     userId: string,
     messageId: string,
-  ): Promise<Record<string, any>> {
+  ): Promise<ExtractedAttributesData> {
     try {
       this.logger.log(
         `Processing attribute extraction for user: ${userId}, message: ${messageId}`,
@@ -341,7 +365,7 @@ RÉPONSE JSON :`;
    */
   async processAttributeExtraction(
     userId: string,
-  ): Promise<Record<string, any>> {
+  ): Promise<ExtractedAttributesData> {
     try {
       this.logger.log(`Processing attribute extraction for user: ${userId}`);
 
@@ -376,7 +400,9 @@ RÉPONSE JSON :`;
   /**
    * Get user with extracted attributes merged into response
    */
-  async getUserWithExtractedAttributes(userId: string): Promise<any> {
+  async getUserWithExtractedAttributes(
+    userId: string,
+  ): Promise<UserWithAttributesDto | null> {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user) {
