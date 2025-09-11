@@ -90,7 +90,7 @@ export class ResourcesController {
       if (!allowedMimeTypes.includes(file.mimetype)) {
         throw new HttpException(
           `Unsupported file type: ${file.mimetype}. Allowed types: ${allowedMimeTypes.join(', ')}`,
-          HttpStatus.NOT_FOUND,
+          HttpStatus.BAD_REQUEST,
         );
       }
 
