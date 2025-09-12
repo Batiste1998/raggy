@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { memoryStorage } from 'multer';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -20,6 +20,7 @@ import {
   UserController,
 } from './controllers';
 import { GlobalExceptionFilter } from './filters';
+import { UuidValidationPipe } from './pipes';
 
 @Module({
   imports: [
@@ -47,6 +48,10 @@ import { GlobalExceptionFilter } from './filters';
     MessageService,
     UserService,
     AttributeExtractionService,
+    {
+      provide: APP_PIPE,
+      useClass: UuidValidationPipe,
+    },
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
