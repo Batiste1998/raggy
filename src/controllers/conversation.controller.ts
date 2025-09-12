@@ -10,7 +10,6 @@ import {
 import { ConversationService } from '../services';
 import { MessageService } from '../services';
 import { CreateSimpleConversationDto, GetConversationsDto } from '../dto';
-import { StandardResponse } from '../dto/response.dto';
 
 @Controller('conversations')
 export class ConversationController {
@@ -26,12 +25,10 @@ export class ConversationController {
    * Creates a conversation for a user with welcome message for first conversations
    */
   @Post()
-  async createConversation(@Body() dto: CreateSimpleConversationDto): Promise<
-    StandardResponse<{
-      id: string;
-      welcome_message?: string;
-    }>
-  > {
+  async createConversation(@Body() dto: CreateSimpleConversationDto): Promise<{
+    id: string;
+    welcome_message?: string;
+  }> {
     this.logger.log(`Creating conversation for user: ${dto.user}`);
 
     // Create conversation using new service method (throws 404 if user not found)
@@ -52,47 +49,39 @@ export class ConversationController {
       data.welcome_message = welcome_message.content;
     }
 
-    return {
-      message: 'Conversation created successfully',
-      data,
-    };
+    return data;
   }
 
   /**
    * GET /conversations?user_id={userId} - Get all conversations for a user
    */
   @Get()
-  async getUserConversations(@Body() dto: GetConversationsDto): Promise<
-    StandardResponse<{
-      conversations: Array<{
-        id: string;
-        user_id: string;
-        title?: string;
-        summary?: string;
-        created_at: Date;
-        updated_at: Date;
-      }>;
-      count: number;
-    }>
-  > {
+  async getUserConversations(@Body() dto: GetConversationsDto): Promise<{
+    conversations: Array<{
+      id: string;
+      user_id: string;
+      title?: string;
+      summary?: string;
+      created_at: Date;
+      updated_at: Date;
+    }>;
+    count: number;
+  }> {
     this.logger.log(`Getting conversations for user: ${dto.user_id}`);
     const conversations = await this.conversationService.getUserConversations(
       dto.user_id,
     );
 
     return {
-      message: 'Conversations retrieved successfully',
-      data: {
-        conversations: conversations.map((conv) => ({
-          id: conv.id,
-          user_id: conv.user_id,
-          title: conv.title,
-          summary: conv.summary,
-          created_at: conv.createdAt,
-          updated_at: conv.updatedAt,
-        })),
-        count: conversations.length,
-      },
+      conversations: conversations.map((conv) => ({
+        id: conv.id,
+        user_id: conv.user_id,
+        title: conv.title,
+        summary: conv.summary,
+        created_at: conv.createdAt,
+        updated_at: conv.updatedAt,
+      })),
+      count: conversations.length,
     };
   }
 
@@ -100,48 +89,43 @@ export class ConversationController {
    * GET /conversations/:id - Get a specific conversation with messages
    */
   @Get(':id')
-  async getConversation(@Param('id') conversationId: string): Promise<
-    StandardResponse<{
-      conversation: {
-        id: string;
-        user_id: string;
-        title?: string;
-        summary?: string;
-        created_at: Date;
-        updated_at: Date;
-      };
-      messages: Array<{
-        id: string;
-        conversation_id: string;
-        role: string;
-        content: string;
-        created_at: Date;
-      }>;
-    }>
-  > {
+  async getConversation(@Param('id') conversationId: string): Promise<{
+    conversation: {
+      id: string;
+      user_id: string;
+      title?: string;
+      summary?: string;
+      created_at: Date;
+      updated_at: Date;
+    };
+    messages: Array<{
+      id: string;
+      conversation_id: string;
+      role: string;
+      content: string;
+      created_at: Date;
+    }>;
+  }> {
     this.logger.log(`Getting conversation: ${conversationId}`);
     const { conversation, messages } =
       await this.conversationService.getConversation(conversationId);
 
     return {
-      message: 'Conversation retrieved successfully',
-      data: {
-        conversation: {
-          id: conversation.id,
-          user_id: conversation.user_id,
-          title: conversation.title,
-          summary: conversation.summary,
-          created_at: conversation.createdAt,
-          updated_at: conversation.updatedAt,
-        },
-        messages: messages.map((msg) => ({
-          id: msg.id,
-          conversation_id: msg.conversation_id,
-          role: msg.role,
-          content: msg.content,
-          created_at: msg.createdAt,
-        })),
+      conversation: {
+        id: conversation.id,
+        user_id: conversation.user_id,
+        title: conversation.title,
+        summary: conversation.summary,
+        created_at: conversation.createdAt,
+        updated_at: conversation.updatedAt,
       },
+      messages: messages.map((msg) => ({
+        id: msg.id,
+        conversation_id: msg.conversation_id,
+        role: msg.role,
+        content: msg.content,
+        created_at: msg.createdAt,
+      })),
     };
   }
 
@@ -149,19 +133,14 @@ export class ConversationController {
    * DELETE /conversations/:id - Delete a conversation
    */
   @Delete(':id')
-  async deleteConversation(@Param('id') conversationId: string): Promise<
-    StandardResponse<{
-      id: string;
-    }>
-  > {
+  async deleteConversation(@Param('id') conversationId: string): Promise<{
+    id: string;
+  }> {
     this.logger.log(`Deleting conversation: ${conversationId}`);
     await this.conversationService.deleteConversation(conversationId);
 
     return {
-      message: 'Conversation deleted successfully',
-      data: {
-        id: conversationId,
-      },
+      id: conversationId,
     };
   }
 
@@ -169,34 +148,29 @@ export class ConversationController {
    * GET /conversations/:id/messages - Get all messages for a conversation
    */
   @Get(':id/messages')
-  async getConversationMessages(@Param('id') conversationId: string): Promise<
-    StandardResponse<{
-      messages: Array<{
-        id: string;
-        conversation_id: string;
-        role: string;
-        content: string;
-        created_at: Date;
-      }>;
-      count: number;
-    }>
-  > {
+  async getConversationMessages(@Param('id') conversationId: string): Promise<{
+    messages: Array<{
+      id: string;
+      conversation_id: string;
+      role: string;
+      content: string;
+      created_at: Date;
+    }>;
+    count: number;
+  }> {
     this.logger.log(`Getting messages for conversation: ${conversationId}`);
     const messages =
       await this.messageService.getConversationMessages(conversationId);
 
     return {
-      message: 'Messages retrieved successfully',
-      data: {
-        messages: messages.map((msg) => ({
-          id: msg.id,
-          conversation_id: msg.conversation_id,
-          role: msg.role,
-          content: msg.content,
-          created_at: msg.createdAt,
-        })),
-        count: messages.length,
-      },
+      messages: messages.map((msg) => ({
+        id: msg.id,
+        conversation_id: msg.conversation_id,
+        role: msg.role,
+        content: msg.content,
+        created_at: msg.createdAt,
+      })),
+      count: messages.length,
     };
   }
 }

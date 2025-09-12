@@ -22,7 +22,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { LangchainService } from '../services';
 import { Resource } from '../database';
 import { ChatDto, ResourceParamDto } from '../dto';
-import { StandardResponse } from '../dto/response.dto';
 import {
   FILE_CONFIG,
   isValidMimeType,
@@ -108,10 +107,7 @@ export class ResourcesController {
     this.logger.log(`Resource uploaded and processed: ${resourceId}`);
 
     return {
-      message: 'File uploaded and processed successfully',
-      data: {
-        id: resourceId,
-      },
+      id: resourceId,
     };
   }
 
@@ -144,10 +140,7 @@ export class ResourcesController {
     this.logger.log(`Resource deleted successfully: ${id}`);
 
     return {
-      message: 'Resource deleted successfully',
-      data: {
-        id,
-      },
+      id,
     };
   }
 
@@ -170,16 +163,13 @@ export class ResourcesController {
     }));
 
     return {
-      message: 'Resources retrieved successfully',
-      data: {
-        resources: sanitizedResources.map((resource) => ({
-          id: resource.id,
-          mime_type: resource.mimeType,
-          file_size: resource.fileSize,
-          uploaded_at: resource.uploadedAt,
-        })),
-        count: sanitizedResources.length,
-      },
+      resources: sanitizedResources.map((resource) => ({
+        id: resource.id,
+        mime_type: resource.mimeType,
+        file_size: resource.fileSize,
+        uploaded_at: resource.uploadedAt,
+      })),
+      count: sanitizedResources.length,
     };
   }
 
@@ -191,7 +181,7 @@ export class ResourcesController {
   @Post('chat')
   async chat(
     @Body() chatDto: ChatDto,
-  ): Promise<StandardResponse<{ query: string; response: string }>> {
+  ): Promise<{ query: string; response: string }> {
     this.logger.warn(
       'Using deprecated /resources/chat endpoint. Consider using /conversations instead.',
     );
@@ -203,11 +193,8 @@ export class ResourcesController {
     this.logger.log(`RAG response generated for query: "${chatDto.query}"`);
 
     return {
-      message: 'RAG response generated successfully',
-      data: {
-        query: chatDto.query,
-        response,
-      },
+      query: chatDto.query,
+      response,
     };
   }
 }

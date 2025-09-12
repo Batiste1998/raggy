@@ -11,7 +11,6 @@ import { MessageService } from '../services';
 import { ConversationService } from '../services';
 import { LangchainService } from '../services';
 import { SendSimpleMessageDto } from '../dto';
-import { StandardResponse } from '../dto/response.dto';
 import { MESSAGE_ROLES } from '../config/constants';
 
 @Controller('messages')
@@ -28,27 +27,22 @@ export class MessageController {
    * GET /messages/:id - Get a specific message
    */
   @Get(':id')
-  async getMessage(@Param('id') messageId: string): Promise<
-    StandardResponse<{
-      id: string;
-      conversation_id: string;
-      role: string;
-      content: string;
-      created_at: Date;
-    }>
-  > {
+  async getMessage(@Param('id') messageId: string): Promise<{
+    id: string;
+    conversation_id: string;
+    role: string;
+    content: string;
+    created_at: Date;
+  }> {
     this.logger.log(`Getting message: ${messageId}`);
     const message = await this.messageService.getMessage(messageId);
 
     return {
-      message: 'Message retrieved successfully',
-      data: {
-        id: message.id,
-        conversation_id: message.conversation_id,
-        role: message.role,
-        content: message.content,
-        created_at: message.createdAt,
-      },
+      id: message.id,
+      conversation_id: message.conversation_id,
+      role: message.role,
+      content: message.content,
+      created_at: message.createdAt,
     };
   }
 
@@ -56,12 +50,10 @@ export class MessageController {
    * POST /messages - Send a message and get RAG response
    */
   @Post()
-  async sendMessage(@Body() dto: SendSimpleMessageDto): Promise<
-    StandardResponse<{
-      id: string;
-      answer: string;
-    }>
-  > {
+  async sendMessage(@Body() dto: SendSimpleMessageDto): Promise<{
+    id: string;
+    answer: string;
+  }> {
     this.logger.log(`Sending message in conversation: ${dto.conversation}`);
 
     // Verify conversation exists (throws 404 if not found)
@@ -110,11 +102,8 @@ export class MessageController {
     );
 
     return {
-      message: 'Message sent successfully',
-      data: {
-        id: userMessage.id,
-        answer: ragResponse,
-      },
+      id: userMessage.id,
+      answer: ragResponse,
     };
   }
 
@@ -122,19 +111,14 @@ export class MessageController {
    * DELETE /messages/:id - Delete a specific message
    */
   @Delete(':id')
-  async deleteMessage(@Param('id') messageId: string): Promise<
-    StandardResponse<{
-      id: string;
-    }>
-  > {
+  async deleteMessage(@Param('id') messageId: string): Promise<{
+    id: string;
+  }> {
     this.logger.log(`Deleting message: ${messageId}`);
     await this.messageService.deleteMessage(messageId);
 
     return {
-      message: 'Message deleted successfully',
-      data: {
-        id: messageId,
-      },
+      id: messageId,
     };
   }
 }

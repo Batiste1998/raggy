@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import { UserService } from '../services/user.service';
 import { CreateUserDto, UpdateUserDto, UserParamDto } from '../dto/user.dto';
-import { StandardResponse } from '../dto/response.dto';
 
 @Controller('users')
 export class UserController {
@@ -28,25 +27,20 @@ export class UserController {
    */
   @Post()
   @UsePipes(new ValidationPipe({ transform: true }))
-  async createUser(@Body() dto: CreateUserDto): Promise<
-    StandardResponse<{
-      id: string;
-      required_attributes: string[];
-      created_at: Date;
-      updated_at: Date;
-    }>
-  > {
+  async createUser(@Body() dto: CreateUserDto): Promise<{
+    id: string;
+    required_attributes: string[];
+    created_at: Date;
+    updated_at: Date;
+  }> {
     this.logger.log('Creating new user');
     const user = await this.userService.createUser(dto);
 
     return {
-      message: 'User created successfully',
-      data: {
-        id: user.id,
-        required_attributes: user.required_attributes,
-        created_at: user.createdAt,
-        updated_at: user.updatedAt,
-      },
+      id: user.id,
+      required_attributes: user.required_attributes,
+      created_at: user.createdAt,
+      updated_at: user.updatedAt,
     };
   }
 
@@ -57,26 +51,21 @@ export class UserController {
    */
   @Get(':id')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async getUser(@Param() params: UserParamDto): Promise<
-    StandardResponse<{
-      id: string;
-      required_attributes: string[];
-      created_at: Date;
-      updated_at: Date;
-    }>
-  > {
+  async getUser(@Param() params: UserParamDto): Promise<{
+    id: string;
+    required_attributes: string[];
+    created_at: Date;
+    updated_at: Date;
+  }> {
     const { id } = params;
     this.logger.log(`Getting user: ${id}`);
     const user = await this.userService.findUserById(id);
 
     return {
-      message: 'User retrieved successfully',
-      data: {
-        id: user.id,
-        required_attributes: user.required_attributes,
-        created_at: user.createdAt,
-        updated_at: user.updatedAt,
-      },
+      id: user.id,
+      required_attributes: user.required_attributes,
+      created_at: user.createdAt,
+      updated_at: user.updatedAt,
     };
   }
 
@@ -91,26 +80,21 @@ export class UserController {
   async updateUser(
     @Param() params: UserParamDto,
     @Body() dto: UpdateUserDto,
-  ): Promise<
-    StandardResponse<{
-      id: string;
-      required_attributes: string[];
-      created_at: Date;
-      updated_at: Date;
-    }>
-  > {
+  ): Promise<{
+    id: string;
+    required_attributes: string[];
+    created_at: Date;
+    updated_at: Date;
+  }> {
     const { id } = params;
     this.logger.log(`Updating user: ${id}`);
     const user = await this.userService.updateUser(id, dto);
 
     return {
-      message: 'User updated successfully',
-      data: {
-        id: user.id,
-        required_attributes: user.required_attributes,
-        created_at: user.createdAt,
-        updated_at: user.updatedAt,
-      },
+      id: user.id,
+      required_attributes: user.required_attributes,
+      created_at: user.createdAt,
+      updated_at: user.updatedAt,
     };
   }
 
@@ -121,20 +105,15 @@ export class UserController {
    */
   @Delete(':id')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async deleteUser(@Param() params: UserParamDto): Promise<
-    StandardResponse<{
-      id: string;
-    }>
-  > {
+  async deleteUser(@Param() params: UserParamDto): Promise<{
+    id: string;
+  }> {
     const { id } = params;
     this.logger.log(`Deleting user: ${id}`);
     await this.userService.deleteUser(id);
 
     return {
-      message: 'User deleted successfully',
-      data: {
-        id,
-      },
+      id,
     };
   }
 
@@ -144,31 +123,26 @@ export class UserController {
    * Errors: 500 (system error)
    */
   @Get()
-  async getAllUsers(): Promise<
-    StandardResponse<{
-      users: Array<{
-        id: string;
-        required_attributes: string[];
-        created_at: Date;
-        updated_at: Date;
-      }>;
-      count: number;
-    }>
-  > {
+  async getAllUsers(): Promise<{
+    users: Array<{
+      id: string;
+      required_attributes: string[];
+      created_at: Date;
+      updated_at: Date;
+    }>;
+    count: number;
+  }> {
     this.logger.log('Getting all users');
     const users = await this.userService.getAllUsers();
 
     return {
-      message: 'Users retrieved successfully',
-      data: {
-        users: users.map((user) => ({
-          id: user.id,
-          required_attributes: user.required_attributes,
-          created_at: user.createdAt,
-          updated_at: user.updatedAt,
-        })),
-        count: users.length,
-      },
+      users: users.map((user) => ({
+        id: user.id,
+        required_attributes: user.required_attributes,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt,
+      })),
+      count: users.length,
     };
   }
 }
