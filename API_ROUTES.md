@@ -28,6 +28,7 @@ Raggy est un chatbot RAG (Retrieval-Augmented Generation) modulaire avec une API
 ```
 
 **Erreurs**:
+
 - `404`: Aucune configuration active
 - `500`: Erreur système lors de la récupération
 
@@ -46,6 +47,7 @@ Raggy est un chatbot RAG (Retrieval-Augmented Generation) modulaire avec une API
 ```
 
 **Erreurs**:
+
 - `500`: Erreur système lors du reset
 
 ## 2. Routes des Ressources (ResourcesController)
@@ -56,6 +58,7 @@ Raggy est un chatbot RAG (Retrieval-Augmented Generation) modulaire avec une API
 **Body**: `multipart/form-data` avec champ `file` (requis)
 
 **Types de fichiers supportés**:
+
 - `text/csv`
 - `application/pdf`
 - `text/plain`
@@ -81,6 +84,7 @@ curl -X POST http://localhost:3000/resources \
 ```
 
 **Erreurs**:
+
 - `404`: MIME type différent des types acceptés / format différent
 - `413`: Fichier trop lourd (taille supérieure à max_file_size_bytes)
 - `500`: Erreur système
@@ -108,7 +112,9 @@ curl -X DELETE http://localhost:3000/resources/123e4567-e89b-12d3-a456-426614174
 ```
 
 **Erreurs**:
-- `404`: ID de la ressource inconnue
+
+- `400`: ID de la ressource manquant
+- `404`: ID de la ressource mal formé ou inconnu
 - `500`: Erreur système
 
 ### GET /resources
@@ -134,6 +140,7 @@ curl -X DELETE http://localhost:3000/resources/123e4567-e89b-12d3-a456-426614174
 ```
 
 **Erreurs**:
+
 - `500`: Erreur système
 
 ### POST /resources/chat (DÉPRÉCIÉ)
@@ -153,7 +160,7 @@ curl -X DELETE http://localhost:3000/resources/123e4567-e89b-12d3-a456-426614174
 ### POST /conversations
 
 **Description**: Crée une nouvelle conversation
-**Body**: 
+**Body**:
 
 ```json
 {
@@ -176,15 +183,18 @@ curl -X POST http://localhost:3000/conversations \
 ```json
 {
   "id": "conv-uuid",
-  "message": "Conversation created successfully",
-  "welcome_message": "Bonjour ! Je suis votre assistant...",
-  "statusCode": 200
+  "welcome_message": {
+    "content": "Bonjour ! Je suis votre assistant...",
+    "message_id": "msg-uuid"
+  }
 }
 ```
 
-**Note**: Le champ `welcome_message` n'est présent que pour la toute première conversation de l'utilisateur.
+**Note**: Le champ `welcome_message` n'est présent que pour la toute première conversation de l'utilisateur ou si un prompt est fourni.
 
 **Erreurs**:
+
+- `404`: ID utilisateur mal formé ou inexistant
 - `500`: Erreur système
 
 ### GET /conversations
@@ -321,7 +331,8 @@ curl -X POST http://localhost:3000/messages \
 ```
 
 **Erreurs**:
-- `404`: ID de la conversation inconnu
+
+- `404`: ID de la conversation mal formé ou inconnu
 - `500`: Erreur système
 
 ### GET /messages/:id

@@ -165,6 +165,15 @@ export class ConversationService {
     try {
       this.logger.log(`Getting conversation: ${conversationId}`);
 
+      // Validate conversation ID format
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          conversationId,
+        )
+      ) {
+        throw new NotFoundException('Invalid conversation ID format');
+      }
+
       const conversation = await this.conversationRepository.findOne({
         where: { id: conversationId },
         relations: ['messages'],
@@ -256,6 +265,15 @@ export class ConversationService {
   }> {
     try {
       this.logger.log(`Creating simple conversation for user: ${dto.user}`);
+
+      // Validate user ID format
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          dto.user,
+        )
+      ) {
+        throw new NotFoundException('Invalid user ID format');
+      }
 
       // Check if user exists (no longer creating users automatically)
       const user = await this.userRepository.findOne({

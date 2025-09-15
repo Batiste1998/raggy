@@ -120,6 +120,14 @@ export class ResourcesController {
   async deleteResource(@Param() params: ResourceParamDto) {
     const { id } = params;
 
+    // Check if ID is provided
+    if (!id || id.trim() === '') {
+      throw new HttpException(
+        'Resource ID is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     this.logger.log(`Attempting to delete resource: ${id}`);
 
     // Check if resource exists
