@@ -183,14 +183,12 @@ curl -X POST http://localhost:3000/conversations \
 ```json
 {
   "id": "conv-uuid",
-  "welcome_message": {
-    "content": "Bonjour ! Je suis votre assistant...",
-    "message_id": "msg-uuid"
-  }
+  "welcome_message": "Bonjour ! Je suis votre assistant...",
+  "message_id": "msg-uuid"
 }
 ```
 
-**Note**: Le champ `welcome_message` n'est présent que pour la toute première conversation de l'utilisateur ou si un prompt est fourni.
+**Note**: Le champ `welcome_message` n'est présent que si un `prompt` est fourni dans la requête.
 
 **Erreurs**:
 

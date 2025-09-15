@@ -27,10 +27,8 @@ export class ConversationController {
   @Post()
   async createConversation(@Body() dto: CreateSimpleConversationDto): Promise<{
     id: string;
-    welcome_message?: {
-      content: string;
-      message_id: string;
-    };
+    welcome_message?: string;
+    message_id?: string;
   }> {
     this.logger.log(`Creating conversation for user: ${dto.user}`);
 
@@ -42,20 +40,16 @@ export class ConversationController {
 
     const data: {
       id: string;
-      welcome_message?: {
-        content: string;
-        message_id: string;
-      };
+      welcome_message?: string;
+      message_id?: string;
     } = {
       id: conversation.id,
     };
 
     // Add welcome message only if it exists
     if (welcome_message) {
-      data.welcome_message = {
-        content: welcome_message.content,
-        message_id: welcome_message.id,
-      };
+      data.welcome_message = welcome_message.content;
+      data.message_id = welcome_message.id;
     }
 
     return data;

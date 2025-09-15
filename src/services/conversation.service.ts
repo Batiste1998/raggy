@@ -287,16 +287,6 @@ export class ConversationService {
         throw new NotFoundException(`User not found: ${dto.user}`);
       }
 
-      // Check if this is the user's first conversation
-      const userConversationCount = await this.conversationRepository.count({
-        where: { user_id: dto.user },
-      });
-
-      const isFirstConversation = userConversationCount === 0;
-      this.logger.log(
-        `Is first conversation for user ${dto.user}: ${isFirstConversation}`,
-      );
-
       // Create conversation
       const conversation = this.conversationRepository.create({
         user_id: dto.user,
@@ -308,7 +298,7 @@ export class ConversationService {
 
       let welcomeMessage: MessageResponseDto | undefined;
 
-      // Generate welcome message only if custom prompt is provided
+      // Generate welcome message if prompt is provided
       if (dto.prompt) {
         this.logger.log('Generating welcome message with custom prompt');
 
