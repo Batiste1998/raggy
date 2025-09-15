@@ -21,7 +21,7 @@ import {
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
         entities: [Resource, DocumentChunk, User, Conversation, Message],
-        synchronize: true, // À désactiver en prod
+        synchronize: process.env.NODE_ENV === 'development',
         logging:
           process.env.NODE_ENV === 'development' ? ['error', 'warn'] : false,
         // Configuration pgvector
