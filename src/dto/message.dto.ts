@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsNotEmpty } from 'class-validator';
+import { IsString, IsEnum, IsNotEmpty, IsUUID } from 'class-validator';
 import { MESSAGE_ROLES } from '../config/constants';
 import type { MessageRole } from '../config/constants';
 
@@ -24,7 +24,7 @@ export class SendMessageDto {
 }
 
 export class SendSimpleMessageDto {
-  @IsString({ message: 'Conversation ID must be provided' })
+  @IsUUID('4', { message: 'Conversation ID must be a valid UUID' })
   @IsNotEmpty({ message: 'Conversation ID cannot be empty' })
   conversation: string;
 

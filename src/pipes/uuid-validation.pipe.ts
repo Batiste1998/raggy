@@ -6,23 +6,41 @@ export class UuidValidationPipe extends ValidationPipe {
   constructor() {
     super({
       transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
       exceptionFactory: (errors) => {
-        // Check if the error is related to UUID validation
-        const uuidErrors = errors.filter((error) => {
+        // Check if the error is specifically a UUID format error (not missing/empty field)
+        const uuidFormatErrors = errors.filter((error) => {
           const constraints = error.constraints || {};
-          return Object.keys(constraints).some(
-            (key) =>
-              key.toLowerCase().includes('uuid') ||
-              constraints[key]?.toLowerCase().includes('uuid'),
-          );
+          const value = error.value;
+
+          // Only consider this a UUID format error if:
+          // 1. There's a UUID constraint violation AND
+          // 2. The value is not undefined/null/empty (meaning it was provided but invalid)
+          // 3. AND it's not a "required field" type error
+
+          const hasUuidConstraint = constraints.isUuid !== undefined;
+          const hasRequiredError =
+            constraints.isNotEmpty !== undefined ||
+            constraints.isDefined !== undefined;
+
+          // Value exists but is invalid UUID format
+          const isInvalidUuidFormat =
+            hasUuidConstraint &&
+            value !== undefined &&
+            value !== null &&
+            value !== '';
+
+          // Return 404 only for actual UUID format errors, not missing/empty fields
+          return isInvalidUuidFormat && !hasRequiredError;
         });
 
-        if (uuidErrors.length > 0) {
-          // Return 404 for UUID validation errors
+        if (uuidFormatErrors.length > 0) {
+          // Return 404 for UUID format validation errors
           throw new HttpException('Resource not found', HttpStatus.NOT_FOUND);
         }
 
-        // For other validation errors, use the default behavior (400)
+        // For other validation errors (missing fields, empty values, etc), use the default behavior (400)
         return super.createExceptionFactory()(errors);
       },
     });

@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsBoolean, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsNotEmpty,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateConversationDto {
   @IsString()
@@ -18,7 +24,7 @@ export class CreateConversationDto {
 }
 
 export class CreateSimpleConversationDto {
-  @IsString({ message: 'User ID must be provided' })
+  @IsUUID('4', { message: 'User ID must be a valid UUID' })
   @IsNotEmpty({ message: 'User ID cannot be empty' })
   user: string;
 
@@ -37,6 +43,6 @@ export class ConversationResponseDto {
 }
 
 export class GetConversationsDto {
-  @IsString()
+  @IsUUID('4', { message: 'User ID must be a valid UUID' })
   user_id: string;
 }
