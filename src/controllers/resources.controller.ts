@@ -116,7 +116,7 @@ export class ResourcesController {
    * Returns: 400 Bad Request with explicit message
    */
   @Delete()
-  async deleteResourceWithoutId(): Promise<never> {
+  deleteResourceWithoutId(): Promise<never> {
     throw new HttpException(
       'Resource ID is required. Use DELETE /resources/{id}',
       HttpStatus.BAD_REQUEST,

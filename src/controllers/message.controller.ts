@@ -53,6 +53,7 @@ export class MessageController {
   async sendMessage(@Body() dto: SendSimpleMessageDto): Promise<{
     id: string;
     answer: string;
+    answer_id: string;
   }> {
     this.logger.log(`Sending message in conversation: ${dto.conversation}`);
 
@@ -85,10 +86,13 @@ export class MessageController {
     );
 
     // Create assistant message
-    await this.messageService.createMessage(dto.conversation, {
-      content: ragResponse,
-      role: MESSAGE_ROLES.ASSISTANT,
-    });
+    const assistantMessage = await this.messageService.createMessage(
+      dto.conversation,
+      {
+        content: ragResponse,
+        role: MESSAGE_ROLES.ASSISTANT,
+      },
+    );
 
     // Add assistant message to conversation history
     await this.langchainService.addMessageToHistory(
@@ -104,6 +108,7 @@ export class MessageController {
     return {
       id: userMessage.id,
       answer: ragResponse,
+      answer_id: assistantMessage.id,
     };
   }
 
