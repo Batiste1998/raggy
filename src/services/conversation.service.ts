@@ -290,13 +290,16 @@ export class ConversationService {
 
       let welcomeMessage: MessageResponseDto | undefined;
 
-      // Generate welcome message for first conversation only
-      if (isFirstConversation) {
-        this.logger.log('Generating welcome message for first conversation');
+      // Generate welcome message only if custom prompt is provided
+      if (dto.prompt) {
+        this.logger.log('Generating welcome message with custom prompt');
 
         try {
           const welcomeContent =
-            await this.langchainService.generateWelcomeMessage(dto.user);
+            await this.langchainService.generateWelcomeMessage(
+              dto.user,
+              dto.prompt,
+            );
 
           welcomeMessage = await this.messageService.createMessage(
             conversation.id,

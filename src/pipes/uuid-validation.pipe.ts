@@ -1,10 +1,4 @@
-import {
-  PipeTransform,
-  Injectable,
-  ArgumentMetadata,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { ValidationPipe } from '@nestjs/common';
 
 @Injectable()
@@ -16,9 +10,10 @@ export class UuidValidationPipe extends ValidationPipe {
         // Check if the error is related to UUID validation
         const uuidErrors = errors.filter((error) => {
           const constraints = error.constraints || {};
-          return Object.keys(constraints).some((key) =>
-            key.toLowerCase().includes('uuid') ||
-            constraints[key]?.toLowerCase().includes('uuid')
+          return Object.keys(constraints).some(
+            (key) =>
+              key.toLowerCase().includes('uuid') ||
+              constraints[key]?.toLowerCase().includes('uuid'),
           );
         });
 

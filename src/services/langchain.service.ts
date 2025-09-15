@@ -536,27 +536,20 @@ export class LangchainService {
   /**
    * Generate a welcome message for a new user
    */
-  async generateWelcomeMessage(userId: string): Promise<string> {
+  async generateWelcomeMessage(
+    userId: string,
+    customPrompt?: string,
+  ): Promise<string> {
     try {
       this.logger.log(`Generating welcome message for user: ${userId}`);
 
-      // Get system prompt from environment variables
-      const systemPrompt = this.configService.get<string>('SYSTEM_PROMPT', '');
-
-      // Create welcome prompt
-      const welcomePrompt = `${systemPrompt}
-
-Tu es ${this.configService.get<string>('ASSISTANT_NAME', 'Assistant')}, un ${this.configService.get<string>('ASSISTANT_ROLE', 'assistant virtuel intelligent')}.
-Un nouvel utilisateur vient de créer sa première conversation avec toi.
-
-Génère un message d'accueil chaleureux et engageant qui :
-- Te présente comme ${this.configService.get<string>('ASSISTANT_NAME', 'Assistant')}, ${this.configService.get<string>('ASSISTANT_ROLE', 'assistant virtuel')}
-- Explique brièvement ton rôle et tes compétences
-- Montre de l'empathie et de la bienveillance
-- Invite l'utilisateur à poser ses questions
-- Utilise un ton professionnel mais amical
-
-Message d'accueil personnalisé :`;
+      // Custom prompt is required for welcome message generation
+      if (!customPrompt) {
+        throw new Error(
+          'Custom prompt is required for welcome message generation',
+        );
+      }
+      const welcomePrompt = customPrompt;
 
       this.logger.log('Calling chat model for welcome message...');
       const response = await this.chatModel.invoke(welcomePrompt);

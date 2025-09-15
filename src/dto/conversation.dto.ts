@@ -21,6 +21,10 @@ export class CreateSimpleConversationDto {
   @IsString({ message: 'User ID must be provided' })
   @IsNotEmpty({ message: 'User ID cannot be empty' })
   user: string;
+
+  @IsOptional()
+  @IsString()
+  prompt?: string; // Prompt pour générer le message de bienvenue
 }
 
 export class ConversationResponseDto {
